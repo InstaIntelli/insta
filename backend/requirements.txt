@@ -1,0 +1,4 @@
+# Backend-specific requirements
+# Main requirements are in root requirements.txt
+# This file can be used for backend-only dependencies if needed
+

@@ -1,0 +1,121 @@
+# ============================================
+# INSTAINTELLI - Docker Compose Configuration
+# ============================================
+# Skeleton structure - services only
+# Full configurations to be implemented by team members
+
+version: '3.8'
+
+services:
+  # PostgreSQL - Hassan (Auth & Users)
+  postgres:
+    image: postgres:15-alpine
+    container_name: instaintelli_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Health check and networks to be configured
+
+  # MongoDB - Sami (Posts)
+  mongodb:
+    image: mongo:7
+    container_name: instaintelli_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGODB_DB}
+    ports:
+      - "${MONGODB_PORT}:27017"
+    volumes:
+      - mongodb_data:/data/db
+    # Health check and networks to be configured
+
+  # Redis - Alisha (Caching)
+  redis:
+    image: redis:7-alpine
+    container_name: instaintelli_redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    # Health check and networks to be configured
+
+  # MinIO - Sami (Object Storage)
+  minio:
+    image: minio/minio:latest
+    container_name: instaintelli_minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports:
+      - "${MINIO_PORT}:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    # Health check and networks to be configured
+
+  # ChromaDB - Raza (Vector Database)
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: instaintelli_chromadb
+    ports:
+      - "${CHROMA_PORT}:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    # Health check and networks to be configured
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: instaintelli_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - mongodb
+      - redis
+      - minio
+      - chromadb
+    volumes:
+      - ./backend:/app
+    # Health check and networks to be configured
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: instaintelli_frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    # Health check and networks to be configured
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:
+  minio_data:
+  chromadb_data:
+
+# Networks to be configured by team
+# networks:
+#   instaintelli_network:
+#     driver: bridge
+
