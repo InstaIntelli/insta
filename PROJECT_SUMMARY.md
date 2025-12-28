@@ -192,7 +192,7 @@ npm install
 npm run dev
 ```
 
-✅ Frontend will be at: http://localhost:5173
+✅ Frontend will be at:  
 
 ### Step 5: Test the Application
 
@@ -356,4 +356,5 @@ This implementation demonstrates:
 **Status: ✅ Complete and Ready to Push!**
 
 Your work is production-ready and follows best practices. Push it to your repository and share with your team! 🚀
+
 
