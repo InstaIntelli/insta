@@ -1,13 +1,12 @@
 """
 Application Configuration
 Loads environment variables and provides settings
-To be implemented by team
 """
 
 from pydantic_settings import BaseSettings
-from typing import List
+from pydantic import field_validator
+from typing import List, Optional, Union
 
-# Placeholder - to be fully implemented
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
@@ -16,12 +15,41 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     DEBUG: bool = True
     SECRET_KEY: str = ""
-    ALLOWED_ORIGINS: List[str] = []
+    ALLOWED_ORIGINS: Union[str, List[str]] = ""  # Can be string or list
     
-    # Database URLs - to be configured
+    @field_validator('ALLOWED_ORIGINS', mode='before')
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        """Parse comma-separated origins string into list, or return list as-is"""
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            if not v or v.strip() == "":
+                return []
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return []
+    
+    @property
+    def allowed_origins_list(self) -> List[str]:
+        """Get ALLOWED_ORIGINS as a list"""
+        if isinstance(self.ALLOWED_ORIGINS, list):
+            return self.ALLOWED_ORIGINS
+        if isinstance(self.ALLOWED_ORIGINS, str):
+            if not self.ALLOWED_ORIGINS or self.ALLOWED_ORIGINS.strip() == "":
+                return []
+            return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+        return []
+    
+    # Database URLs
     POSTGRES_URL: str = ""
     MONGODB_URL: str = ""
+    MONGODB_DATABASE: str = "instaintelli"
+    MONGODB_POSTS_COLLECTION: str = "posts"
     REDIS_URL: str = ""
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str = ""
+    REDIS_DB: int = 0
     
     # Storage
     MINIO_ENDPOINT: str = ""
@@ -29,19 +57,32 @@ class Settings(BaseSettings):
     MINIO_SECRET_KEY: str = ""
     MINIO_BUCKET_NAME: str = ""
     
-    # Vector DB
+    # Vector DB (ChromaDB)
     VECTOR_DB_TYPE: str = "chroma"
     CHROMA_HOST: str = ""
     CHROMA_PORT: int = 8000
+    CHROMA_PERSIST_PATH: str = "./chroma_db"
+    CHROMA_COLLECTION_NAME: str = "post_embeddings"
     
-    # LLM
+    # LLM Provider (openai or grok)
+    LLM_PROVIDER: str = "openai"  # Options: "openai" or "grok"
+    
+    # OpenAI Configuration
     OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4"
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    OPENAI_API_BASE_URL: str = "https://api.openai.com/v1"
+    
+    # Grok (xAI) Configuration
+    GROK_API_KEY: str = ""
+    GROK_MODEL: str = "grok-beta"
+    GROK_EMBEDDING_MODEL: str = "text-embedding-3-small"  # Grok may use OpenAI embeddings
+    GROK_API_BASE_URL: str = "https://api.x.ai/v1"
     
     class Config:
         env_file = ".env"
         case_sensitive = True
 
-# Placeholder - to be instantiated
-# settings = Settings()
+# Global settings instance
+settings = Settings()
 

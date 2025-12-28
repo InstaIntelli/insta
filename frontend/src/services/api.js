@@ -15,23 +15,29 @@ const apiClient = axios.create({
   },
 })
 
-// Request interceptor - to be implemented (e.g., for auth tokens)
-// apiClient.interceptors.request.use((config) => {
-//   const token = localStorage.getItem('token')
-//   if (token) {
-//     config.headers.Authorization = `Bearer ${token}`
-//   }
-//   return config
-// })
+// Request interceptor - add auth token
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
 
-// Response interceptor - to be implemented (e.g., for error handling)
-// apiClient.interceptors.response.use(
-//   (response) => response,
-//   (error) => {
-//     // Handle errors
-//     return Promise.reject(error)
-//   }
-// )
+// Response interceptor - handle errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 unauthorized - redirect to login
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('user')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
 
 export default apiClient
 

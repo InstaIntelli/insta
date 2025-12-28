@@ -1,10 +1,7 @@
 # ============================================
 # INSTAINTELLI - Docker Compose Configuration
 # ============================================
-# Skeleton structure - services only
-# Full configurations to be implemented by team members
-
-version: '3.8'
+# Note: version is no longer required in newer docker-compose versions
 
 services:
   # PostgreSQL - Hassan (Auth & Users)
@@ -12,83 +9,145 @@ services:
     image: postgres:15-alpine
     container_name: instaintelli_postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_DB: ${POSTGRES_DB:-instaintelli}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"  # Use 5433 to avoid conflict with local PostgreSQL
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Health check and networks to be configured
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
 
   # MongoDB - Sami (Posts)
   mongodb:
     image: mongo:7
     container_name: instaintelli_mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGODB_DB}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-mongodb}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-mongodb123}
+      MONGO_INITDB_DATABASE: ${MONGODB_DB:-instaintelli}
     ports:
-      - "${MONGODB_PORT}:27017"
+      - "${MONGODB_PORT:-27018}:27017"  # Use 27018 to avoid conflict with local MongoDB
     volumes:
       - mongodb_data:/data/db
-    # Health check and networks to be configured
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
 
   # Redis - Alisha (Caching)
   redis:
     image: redis:7-alpine
     container_name: instaintelli_redis
     ports:
-      - "${REDIS_PORT}:6379"
+      - "${REDIS_PORT:-6380}:6379"  # Use 6380 to avoid conflict with local Redis
     volumes:
       - redis_data:/data
-    # Health check and networks to be configured
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
 
   # MinIO - Sami (Object Storage)
   minio:
     image: minio/minio:latest
     container_name: instaintelli_minio
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
     ports:
-      - "${MINIO_PORT}:9000"
+      - "${MINIO_PORT:-9000}:9000"
       - "9001:9001"
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
-    # Health check and networks to be configured
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
 
   # ChromaDB - Raza (Vector Database)
   chromadb:
     image: chromadb/chroma:latest
     container_name: instaintelli_chromadb
     ports:
-      - "${CHROMA_PORT}:8000"
+      - "8001:8000"  # Use 8001 to avoid conflict with backend (8000)
     volumes:
       - chromadb_data:/chroma/chroma
-    # Health check and networks to be configured
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+    healthcheck:
+      # Use python to check health since curl may not be available
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/heartbeat')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s  # Give ChromaDB more time to start
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
 
   # FastAPI Backend
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: instaintelli_backend
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres:5432/${POSTGRES_DB:-instaintelli}
+      - MONGODB_URL=mongodb://${MONGODB_USER:-mongodb}:${MONGODB_PASSWORD:-mongodb123}@mongodb:27017/${MONGODB_DB:-instaintelli}?authSource=admin
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - MINIO_ENDPOINT=minio:9000
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000  # Container port (not host port)
     depends_on:
-      - postgres
-      - mongodb
-      - redis
-      - minio
-      - chromadb
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_started  # Changed to service_started - MongoDB may take time to become healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      chromadb:
+        condition: service_started  # Changed to service_started instead of healthy to avoid blocking
     volumes:
-      - ./backend:/app
-    # Health check and networks to be configured
+      - ./backend:/app/backend  # Mount backend code for hot-reload
+      - /app/backend/__pycache__  # Exclude cache from host
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # React Frontend
   frontend:
@@ -100,22 +159,30 @@ services:
       - "3000:3000"
     env_file:
       - .env
+    environment:
+      - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    # Health check and networks to be configured
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+    driver: local
   mongodb_data:
+    driver: local
   redis_data:
+    driver: local
   minio_data:
+    driver: local
   chromadb_data:
+    driver: local
 
-# Networks to be configured by team
-# networks:
-#   instaintelli_network:
-#     driver: bridge
+networks:
+  instaintelli_network:
+    driver: bridge
 
