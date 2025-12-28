@@ -3,7 +3,7 @@
  */
 
 .post-card {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   margin-bottom: var(--spacing-xl);

@@ -5,7 +5,7 @@
 
 .search-page {
   min-height: 100vh;
-  background: linear-gradient(to bottom, var(--white) 0%, var(--background) 100%);
+  background: var(--background);
 }
 
 .search-hero {

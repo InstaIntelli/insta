@@ -1,6 +1,5 @@
 /**
- * Register Page
- * For Hassan - Authentication
+ * Register Page - Instagram-like Design
  */
 
 import React, { useState } from 'react'
@@ -35,6 +34,11 @@ function RegisterPage() {
       return
     }
 
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -53,7 +57,7 @@ function RegisterPage() {
 
       navigate('/feed')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.')
+      setError(err.message || err.response?.data?.detail || 'Registration failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -63,7 +67,7 @@ function RegisterPage() {
     <div className="auth-container">
       <div className="auth-card">
         <h1>InstaIntelli</h1>
-        <h2>Sign Up</h2>
+        <h2>Sign up to see photos and videos from your friends</h2>
         
         {error && <div className="error-message">{error}</div>}
         
@@ -76,7 +80,7 @@ function RegisterPage() {
               value={formData.username}
               onChange={handleChange}
               required
-              placeholder="johndoe"
+              placeholder="Username"
             />
           </div>
 
@@ -88,7 +92,7 @@ function RegisterPage() {
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="your@email.com"
+              placeholder="Email"
             />
           </div>
 
@@ -100,7 +104,7 @@ function RegisterPage() {
               value={formData.password}
               onChange={handleChange}
               required
-              placeholder="••••••••"
+              placeholder="Password"
               minLength={6}
             />
           </div>
@@ -113,7 +117,7 @@ function RegisterPage() {
               value={formData.confirmPassword}
               onChange={handleChange}
               required
-              placeholder="••••••••"
+              placeholder="Confirm Password"
             />
           </div>
 
@@ -123,7 +127,7 @@ function RegisterPage() {
         </form>
 
         <p className="auth-link">
-          Already have an account? <Link to="/login">Login</Link>
+          Already have an account? <Link to="/login">Log in</Link>
         </p>
       </div>
     </div>

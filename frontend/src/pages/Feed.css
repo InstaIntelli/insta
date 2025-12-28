@@ -55,10 +55,11 @@
 .empty-feed {
   text-align: center;
   padding: var(--spacing-2xl) var(--spacing-lg);
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-base), border-color var(--transition-base);
 }
 
 .empty-feed-icon {

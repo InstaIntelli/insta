@@ -1,6 +1,5 @@
 /**
- * Login Page
- * For Hassan - Authentication
+ * Login Page - Instagram-like Design
  */
 
 import React, { useState } from 'react'
@@ -32,7 +31,7 @@ function LoginPage() {
 
       navigate('/feed')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Please try again.')
+      setError(err.message || err.response?.data?.detail || 'Login failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -42,7 +41,7 @@ function LoginPage() {
     <div className="auth-container">
       <div className="auth-card">
         <h1>InstaIntelli</h1>
-        <h2>Login</h2>
+        <h2>Welcome back</h2>
         
         {error && <div className="error-message">{error}</div>}
         
@@ -54,7 +53,7 @@ function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="your@email.com"
+              placeholder="Email"
             />
           </div>
 
@@ -65,18 +64,24 @@ function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="••••••••"
+              placeholder="Password"
             />
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary">
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Logging in...' : 'Log In'}
           </button>
         </form>
 
         <p className="auth-link">
           Don't have an account? <Link to="/register">Sign up</Link>
         </p>
+
+        <div className="demo-info">
+          <strong>Demo Account:</strong>
+          Email: demo@instaintelli.com<br />
+          Password: demo123
+        </div>
       </div>
     </div>
   )

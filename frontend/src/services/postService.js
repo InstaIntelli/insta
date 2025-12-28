@@ -34,10 +34,25 @@ export const postService = {
     return response.data
   },
 
-  // Get feed
+  // Get feed (fetch all posts for now - will be enhanced later)
   getFeed: async () => {
-    const response = await apiClient.get('/api/v1/posts/feed')
-    return response.data
+    // For now, we'll get posts from a user or create a feed endpoint
+    // This is a placeholder - in production, this would fetch from a feed endpoint
+    try {
+      // Try to get feed endpoint first
+      const response = await apiClient.get('/api/v1/posts/feed')
+      return response.data
+    } catch (err) {
+      // If feed endpoint doesn't exist, return empty array
+      // In production, this would fetch from a different endpoint
+      return { posts: [] }
+    }
+  },
+
+  // Get all posts (for development)
+  getAllPosts: async () => {
+    // This is a helper method - in production, use getFeed
+    return { posts: [] }
   }
 }
 

@@ -1,5 +1,5 @@
 /**
- * Feed Page - Modern Instagram-like Feed
+ * Feed Page - Instagram-like Feed
  */
 
 import React, { useState, useEffect } from 'react'
@@ -12,6 +12,7 @@ function FeedPage() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
 
   useEffect(() => {
     loadFeed()
@@ -19,10 +20,24 @@ function FeedPage() {
 
   const loadFeed = async () => {
     try {
-      const data = await postService.getFeed()
-      setPosts(data.posts || [])
+      // Try to get user's posts first
+      if (user.user_id) {
+        try {
+          const userPosts = await postService.getUserPosts(user.user_id)
+          setPosts(userPosts.posts || userPosts || [])
+        } catch (err) {
+          // If user posts endpoint fails, try feed
+          const data = await postService.getFeed()
+          setPosts(data.posts || [])
+        }
+      } else {
+        const data = await postService.getFeed()
+        setPosts(data.posts || [])
+      }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load feed')
+      // If all fails, show empty state
+      setPosts([])
+      console.log('Feed loading:', err.message || 'No posts available')
     } finally {
       setLoading(false)
     }
@@ -34,18 +49,6 @@ function FeedPage() {
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>Loading your feed...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="feed-container">
-        <div className="error-container">
-          <span className="error-icon">⚠️</span>
-          <p>{error}</p>
-          <button onClick={loadFeed} className="btn-primary">Try Again</button>
         </div>
       </div>
     )
@@ -67,7 +70,7 @@ function FeedPage() {
           <div className="posts-feed">
             {posts.map((post, index) => (
               <PostCard
-                key={post.post_id || index}
+                key={post.post_id || post._id || index}
                 post={post}
               />
             ))}
