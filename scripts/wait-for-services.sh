@@ -46,3 +46,4 @@ echo "ChromaDB is ready!"
 
 echo "All services are ready!"
 
+

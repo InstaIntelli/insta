@@ -1,21 +1,27 @@
 /**
- * Profile Page
- * For Hassan - User Profiles
+ * Profile Page with MFA Management
  */
 
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { userService } from '../services/userService'
+import { mfaService } from '../services/mfaService'
 import './Profile.css'
 
 function ProfilePage() {
   const { userId } = useParams()
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [mfaStatus, setMfaStatus] = useState({ mfa_enabled: false, has_recovery_codes: false })
+  const [showDisableMFA, setShowDisableMFA] = useState(false)
+  const [disableCode, setDisableCode] = useState('')
+  const [mfaError, setMfaError] = useState('')
 
   useEffect(() => {
     loadUser()
+    loadMFAStatus()
   }, [userId])
 
   const loadUser = async () => {
@@ -26,6 +32,37 @@ function ProfilePage() {
       setError('Failed to load user profile')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadMFAStatus = async () => {
+    try {
+      const status = await mfaService.getMFAStatus()
+      setMfaStatus(status)
+    } catch (err) {
+      console.error('Failed to load MFA status:', err)
+    }
+  }
+
+  const handleEnableMFA = () => {
+    navigate('/mfa/setup')
+  }
+
+  const handleDisableMFA = async () => {
+    if (!disableCode) {
+      setMfaError('Please enter verification code')
+      return
+    }
+
+    try {
+      await mfaService.disableMFA(disableCode)
+      setMfaStatus({ mfa_enabled: false, has_recovery_codes: false })
+      setShowDisableMFA(false)
+      setDisableCode('')
+      setMfaError('')
+      alert('MFA disabled successfully')
+    } catch (err) {
+      setMfaError(err.response?.data?.detail || 'Failed to disable MFA')
     }
   }
 
@@ -53,10 +90,66 @@ function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* MFA Section */}
+      <div className="profile-section mfa-section">
+        <h2>🔐 Two-Factor Authentication</h2>
+        <div className="mfa-status-card">
+          {mfaStatus.mfa_enabled ? (
+            <>
+              <div className="mfa-enabled">
+                <span className="status-badge enabled">✓ Enabled</span>
+                <p>Your account is protected with two-factor authentication</p>
+              </div>
+              
+              {!showDisableMFA ? (
+                <button 
+                  onClick={() => setShowDisableMFA(true)}
+                  className="btn-danger"
+                >
+                  Disable MFA
+                </button>
+              ) : (
+                <div className="disable-mfa-form">
+                  {mfaError && <div className="error-message">{mfaError}</div>}
+                  <p>Enter your authenticator code or recovery code to disable MFA:</p>
+                  <input
+                    type="text"
+                    value={disableCode}
+                    onChange={(e) => setDisableCode(e.target.value)}
+                    placeholder="000000 or XXXX-XXXX"
+                    className="code-input"
+                  />
+                  <div className="button-group">
+                    <button onClick={() => {
+                      setShowDisableMFA(false)
+                      setDisableCode('')
+                      setMfaError('')
+                    }} className="btn-secondary">
+                      Cancel
+                    </button>
+                    <button onClick={handleDisableMFA} className="btn-danger">
+                      Confirm Disable
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="mfa-disabled">
+                <span className="status-badge disabled">✗ Disabled</span>
+                <p>Add an extra layer of security to your account with Google Authenticator</p>
+              </div>
+              <button onClick={handleEnableMFA} className="btn-primary">
+                Enable Two-Factor Authentication
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
 
 export default ProfilePage
-
-

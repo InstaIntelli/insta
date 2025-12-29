@@ -13,6 +13,7 @@ import ProfilePage from './pages/ProfilePage'
 import UploadPage from './pages/UploadPage'
 import SearchPage from './pages/SearchPage'
 import ChatPage from './pages/ChatPage'
+import MFASetup from './pages/MFASetup'
 import './App.css'
 
 // Protected Route Component
@@ -77,6 +78,14 @@ function App() {
               <Layout>
                 <ChatPage />
               </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mfa/setup"
+          element={
+            <ProtectedRoute>
+              <MFASetup />
             </ProtectedRoute>
           }
         />

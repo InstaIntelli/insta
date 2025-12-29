@@ -1,11 +1,11 @@
 /**
  * Login Page
- * For Hassan - Authentication
  */
 
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authService } from '../services/authService'
+import MFAVerification from '../components/MFAVerification'
 import './Auth.css'
 
 function LoginPage() {
@@ -13,6 +13,8 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [mfaRequired, setMfaRequired] = useState(false)
+  const [mfaUserId, setMfaUserId] = useState('')
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -23,10 +25,17 @@ function LoginPage() {
     try {
       const response = await authService.login({ email, password })
       
-      // Store token
+      // Check if MFA is required
+      if (response.mfa_required) {
+        setMfaRequired(true)
+        setMfaUserId(response.user_id)
+        setLoading(false)
+        return
+      }
+      
+      // No MFA - proceed with login
       if (response.access_token) {
         localStorage.setItem('token', response.access_token)
-        localStorage.setItem('refresh_token', response.refresh_token)
         localStorage.setItem('user', JSON.stringify(response.user))
       }
 
@@ -36,6 +45,17 @@ function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleMFACancel = () => {
+    setMfaRequired(false)
+    setMfaUserId('')
+    setPassword('')
+  }
+
+  // Show MFA verification if required
+  if (mfaRequired) {
+    return <MFAVerification userId={mfaUserId} email={email} onCancel={handleMFACancel} />
   }
 
   return (

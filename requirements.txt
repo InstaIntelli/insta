@@ -27,6 +27,7 @@ hiredis==2.2.3
 # Object Storage (Sami - MinIO)
 minio==7.2.0
 boto3==1.29.7
+Pillow>=10.0.0  # Image processing for thumbnails
 
 # Vector Database (Raza - Embeddings)
 faiss-cpu>=1.12.0
@@ -46,6 +47,8 @@ langchain-openai==0.0.2
 # Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+pyotp==2.9.0  # TOTP for MFA
+qrcode[pil]==7.4.2  # QR code generation for MFA
 
 # Utilities
 python-dotenv==1.0.0

@@ -26,3 +26,4 @@ fi
 
 echo "PostgreSQL initialization complete!"
 
+

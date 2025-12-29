@@ -1,39 +1,84 @@
 /**
  * Authentication API service
- * For Hassan - Auth & Users
  */
 
 import apiClient from './api'
 
 export const authService = {
-  // Registration
+  // Register new user
   register: async (userData) => {
-    const response = await apiClient.post('/api/v1/auth/register', userData)
-    return response.data
+    try {
+      const response = await apiClient.post('/api/v1/auth/register', userData)
+      
+      // Store token and user data
+      if (response.data.access_token) {
+        localStorage.setItem('token', response.data.access_token)
+        localStorage.setItem('user', JSON.stringify(response.data.user))
+      }
+      
+      return response.data
+    } catch (error) {
+      console.error('Registration error:', error)
+      throw error
+    }
   },
 
-  // Login
+  // Login user
   login: async (credentials) => {
-    const response = await apiClient.post('/api/v1/auth/login', credentials)
-    return response.data
+    try {
+      const response = await apiClient.post('/api/v1/auth/login', credentials)
+      
+      // Store token and user data
+      if (response.data.access_token) {
+        localStorage.setItem('token', response.data.access_token)
+        localStorage.setItem('user', JSON.stringify(response.data.user))
+      }
+      
+      return response.data
+    } catch (error) {
+      console.error('Login error:', error)
+      throw error
+    }
   },
 
-  // Logout
+  // Logout user
   logout: async () => {
-    const response = await apiClient.post('/api/v1/auth/logout')
-    return response.data
+    try {
+      await apiClient.post('/api/v1/auth/logout')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      // Always clear local storage
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+    }
+    
+    return { message: 'Logged out successfully' }
   },
 
   // Get current user
   getCurrentUser: async () => {
-    const response = await apiClient.get('/api/v1/auth/me')
-    return response.data
+    try {
+      const response = await apiClient.get('/api/v1/auth/me')
+      return response.data
+    } catch (error) {
+      console.error('Get current user error:', error)
+      // If token is invalid, clear storage
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      return null
+    }
   },
 
-  // Refresh token
-  refreshToken: async (refreshToken) => {
-    const response = await apiClient.post('/api/v1/auth/refresh', { refresh_token: refreshToken })
-    return response.data
+  // Check if user is authenticated
+  isAuthenticated: () => {
+    return !!localStorage.getItem('token')
+  },
+
+  // Get stored user data
+  getStoredUser: () => {
+    const user = localStorage.getItem('user')
+    return user ? JSON.parse(user) : null
   }
 }
 

@@ -5,8 +5,16 @@ Main entry point for the backend API
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
 from app.core.config import settings
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
@@ -14,6 +22,20 @@ app = FastAPI(
     description="AI-powered social media analytics platform with vector search, RAG, and multi-database architecture",
     version="0.1.0"
 )
+
+
+# Startup event to initialize database
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on startup"""
+    try:
+        from app.db.postgres import create_tables
+        create_tables()
+        logger.info("Application startup complete")
+    except Exception as e:
+        logger.error(f"Error during startup: {str(e)}")
+        # Don't fail startup if database initialization fails
+        logger.warning("Continuing without database initialization")
 
 # CORS middleware
 app.add_middleware(
@@ -25,10 +47,11 @@ app.add_middleware(
 )
 
 # API routers - integrated from team members
-from app.api.v1.endpoints import auth, users, posts, ai, search
+from app.api.v1.endpoints import auth, users, posts, ai, search, mfa
 
 # Register routers
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
+app.include_router(mfa.router, prefix="/api/v1", tags=["Multi-Factor Authentication"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
 app.include_router(posts.router, prefix="/api/v1", tags=["Posts"])
 app.include_router(ai.router, prefix="/api/v1", tags=["AI Processing"])
