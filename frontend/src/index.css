@@ -1,6 +1,4 @@
-/**
- * Global Styles - Modern Design System
- */
+/* Base Reset and Global Styles */
 
 * {
   margin: 0;
@@ -8,171 +6,50 @@
   box-sizing: border-box;
 }
 
-:root {
-  /* Color Palette */
-  --primary: #0095f6;
-  --primary-hover: #0084d4;
-  --primary-dark: #0064a3;
-  --secondary: #8e8e8e;
-  --text-primary: #262626;
-  --text-secondary: #8e8e8e;
-  --border: #dbdbdb;
-  --background: #fafafa;
-  --white: #ffffff;
-  --error: #ed4956;
-  --success: #4caf50;
-  --warning: #ff9800;
-  
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  --gradient-ai: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
-  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.2);
-  
-  /* Spacing */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --spacing-2xl: 3rem;
-  
-  /* Border Radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-full: 9999px;
-  
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 250ms ease;
-  --transition-slow: 350ms ease;
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
+  margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--background);
-  color: var(--text-primary);
-  line-height: 1.6;
+  overflow-x: hidden;
 }
 
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--background);
+#root {
+  min-height: 100vh;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: var(--radius-full);
+/* Remove default button styles */
+button {
+  font-family: inherit;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary);
+/* Remove default link styles */
+a {
+  text-decoration: none;
+  color: inherit;
 }
 
-/* Typography */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--text-primary);
+/* Remove default list styles */
+ul, ol {
+  list-style: none;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-.fade-in {
-  animation: fadeIn var(--transition-base);
-}
-
-.slide-in {
-  animation: slideIn var(--transition-base);
-}
-
-/* Utility Classes */
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-2xl);
-  color: var(--text-secondary);
-}
-
-.error {
-  text-align: center;
-  padding: var(--spacing-xl);
-  color: var(--error);
-  background: rgba(237, 73, 86, 0.1);
-  border-radius: var(--radius-lg);
-  margin: var(--spacing-md);
-}
-
-.error-message {
-  background: rgba(237, 73, 86, 0.1);
-  color: var(--error);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  margin: var(--spacing-md) 0;
-  border-left: 3px solid var(--error);
-}
-
-.success-message {
-  background: rgba(76, 175, 80, 0.1);
-  color: var(--success);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  margin: var(--spacing-md) 0;
-  border-left: 3px solid var(--success);
+/* Image styles */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }

@@ -1,5 +1,5 @@
 /**
- * Login Page
+ * Modern Login Page with enhanced UI
  */
 
 import React, { useState } from 'react'
@@ -15,6 +15,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [mfaRequired, setMfaRequired] = useState(false)
   const [mfaUserId, setMfaUserId] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -41,7 +42,7 @@ function LoginPage() {
 
       navigate('/feed')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Please try again.')
+      setError(err.response?.data?.detail || 'Invalid email or password')
     } finally {
       setLoading(false)
     }
@@ -59,49 +60,96 @@ function LoginPage() {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1>InstaIntelli</h1>
-        <h2>Login</h2>
-        
-        {error && <div className="error-message">{error}</div>}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="your@email.com"
-            />
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-card modern-card">
+          <div className="auth-header">
+            <h1 className="brand-logo">InstaIntelli</h1>
+            <p className="auth-subtitle">Welcome back! Please login to your account.</p>
           </div>
 
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-            />
+          {error && (
+            <div className="error-message animate-shake">
+              <span className="error-icon">⚠️</span>
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="auth-form">
+            <div className="form-group modern">
+              <div className="input-wrapper">
+                <span className="input-icon">📧</span>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="Email address"
+                  className="modern-input"
+                />
+              </div>
+            </div>
+
+            <div className="form-group modern">
+              <div className="input-wrapper">
+                <span className="input-icon">🔒</span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="Password"
+                  className="modern-input"
+                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="btn-primary modern-btn"
+            >
+              {loading ? (
+                <>
+                  <span className="spinner"></span>
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
+
+          <div className="auth-divider">
+            <span>OR</span>
           </div>
 
-          <button type="submit" disabled={loading} className="btn-primary">
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <p className="auth-link">
-          Don't have an account? <Link to="/register">Sign up</Link>
-        </p>
+          <div className="auth-footer">
+            <p>
+              Don't have an account?{' '}
+              <Link to="/register" className="auth-link">
+                Sign up now
+              </Link>
+            </p>
+            <p className="back-home">
+              <Link to="/" className="auth-link">
+                ← Back to home
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
 export default LoginPage
-
-

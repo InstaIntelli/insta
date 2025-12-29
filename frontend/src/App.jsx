@@ -1,11 +1,13 @@
 /**
  * InstaIntelli Frontend - Main App Component
- * Modern, professional UI/UX
+ * Modern, professional UI/UX with Instagram-like design
  */
 
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { ThemeProvider } from './contexts/ThemeContext'
 import Layout from './components/Layout'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import FeedPage from './pages/FeedPage'
@@ -22,78 +24,108 @@ const ProtectedRoute = ({ children }) => {
   return token ? children : <Navigate to="/login" replace />
 }
 
+// Public Route Component (redirects if logged in)
+const PublicRoute = ({ children }) => {
+  const token = localStorage.getItem('token')
+  return token ? <Navigate to="/feed" replace /> : children
+}
+
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        
-        {/* Protected Routes with Layout */}
-        <Route
-          path="/feed"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <FeedPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile/:userId"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ProfilePage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/upload"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <UploadPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/search"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <SearchPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/chat"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ChatPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mfa/setup"
-          element={
-            <ProtectedRoute>
-              <MFASetup />
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* Default Route */}
-        <Route path="/" element={<Navigate to="/feed" replace />} />
-      </Routes>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          {/* Public Routes */}
+          <Route 
+            path="/" 
+            element={
+              <PublicRoute>
+                <LandingPage />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/login" 
+            element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/register" 
+            element={
+              <PublicRoute>
+                <RegisterPage />
+              </PublicRoute>
+            } 
+          />
+          
+          {/* Protected Routes with Layout */}
+          <Route
+            path="/feed"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <FeedPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/:userId"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProfilePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/upload"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UploadPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SearchPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ChatPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mfa/setup"
+            element={
+              <ProtectedRoute>
+                <MFASetup />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
   )
 }
 
