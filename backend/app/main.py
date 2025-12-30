@@ -31,6 +31,11 @@ async def startup_event():
     try:
         from app.db.postgres import create_tables
         create_tables()
+        
+        # Initialize Neo4j
+        from app.db.neo4j import init_neo4j
+        init_neo4j()
+        
         logger.info("Application startup complete")
     except Exception as e:
         logger.error(f"Error during startup: {str(e)}")
@@ -47,7 +52,7 @@ app.add_middleware(
 )
 
 # API routers - integrated from team members
-from app.api.v1.endpoints import auth, users, posts, ai, search, mfa
+from app.api.v1.endpoints import auth, users, posts, ai, search, mfa, social
 
 # Register routers
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
@@ -56,6 +61,7 @@ app.include_router(users.router, prefix="/api/v1", tags=["Users"])
 app.include_router(posts.router, prefix="/api/v1", tags=["Posts"])
 app.include_router(ai.router, prefix="/api/v1", tags=["AI Processing"])
 app.include_router(search.router, prefix="/api/v1", tags=["Search & RAG"])
+app.include_router(social.router, prefix="/api/v1", tags=["Social Features"])
 
 
 @app.get("/")

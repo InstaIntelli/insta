@@ -1,18 +1,17 @@
 # ============================================
 # INSTAINTELLI - Python Dependencies
 # ============================================
+
 # FastAPI & Web Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-pydantic>=2.9.0
-pydantic-settings>=2.6.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
 
 # Database Drivers
 # PostgreSQL (Hassan - Auth & Users)
-psycopg2-binary==2.9.10  # Updated for better Python 3.14 support
-# OR use psycopg (v3) instead:
-# psycopg[binary]>=3.1.0
+psycopg2-binary==2.9.10
 sqlalchemy==2.0.23
 alembic==1.12.1
 
@@ -27,28 +26,24 @@ hiredis==2.2.3
 # Object Storage (Sami - MinIO)
 minio==7.2.0
 boto3==1.29.7
-Pillow>=10.0.0  # Image processing for thumbnails
+Pillow>=10.0.0
 
 # Vector Database (Raza - Embeddings)
 faiss-cpu>=1.12.0
-numpy>=1.26.0,<2.0.0  # Constrain to <2.0 for langchain compatibility
-# chromadb>=1.4.0  # Temporarily commented out due to dependency conflicts with openai/numpy
-#                    # ChromaDB runs as a separate Docker service, so the Python client is optional
-#                    # Uncomment when dependency conflicts are resolved
+numpy>=1.26.0,<2.0.0
 
 # AI & LLM (Raza - AI Processing)
-openai>=1.6.1,<1.68.0  # Constrain to <1.68.0 to avoid numpy 2.x requirement
-langchain==0.0.350
-langchain-openai==0.0.2
-# sentence-transformers==2.2.2  # Commented out: Not used (we use OpenAI API for embeddings)
-#                                # This avoids downloading PyTorch (~1-2GB). Uncomment if needed for local models.
-# tiktoken>=0.5.2  # Skip if causing issues, or install Rust first
+openai>=1.6.1,<1.68.0
+# langchain==0.0.350  # Commented out - causing slow dependency resolution
+# langchain-openai==0.0.2  # Commented out - causing slow dependency resolution
+tiktoken>=0.5.2,<0.6.0  # Now installable with Rust
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-pyotp==2.9.0  # TOTP for MFA
-qrcode[pil]==7.4.2  # QR code generation for MFA
+bcrypt>=4.0.1
+pyotp==2.9.0
+qrcode[pil]==7.4.2
 
 # Utilities
 python-dotenv==1.0.0
@@ -60,3 +55,16 @@ pytest==7.4.3
 pytest-asyncio==0.21.1
 black==23.11.0
 flake8==6.1.0
+
+# ============================================
+# Optional Dependencies (Uncomment if needed)
+# ============================================
+
+# ChromaDB - Runs as Docker service, Python client required for vector search
+chromadb>=0.4.0
+
+# Graph Database (Neo4j - Social Connections)
+neo4j>=5.14.0
+
+# Local embeddings (requires ~1-2GB PyTorch download)
+# sentence-transformers>=2.2.2

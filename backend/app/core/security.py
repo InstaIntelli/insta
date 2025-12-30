@@ -5,16 +5,14 @@ Security utilities for authentication and authorization
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import hashlib
+import secrets
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.postgres import get_db
-
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
@@ -27,29 +25,46 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
-    Verify a password against its hash
+    Verify a password against its hash (using SHA256 - no length limit)
     
     Args:
         plain_password: Plain text password
-        hashed_password: Hashed password
+        hashed_password: Hashed password (format: salt:hash)
         
     Returns:
         True if password matches, False otherwise
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        # Split salt and hash
+        parts = hashed_password.split(':')
+        if len(parts) != 2:
+            return False
+        salt, stored_hash = parts
+        
+        # Hash the provided password with the same salt
+        password_hash = hashlib.sha256((plain_password + salt).encode()).hexdigest()
+        
+        return password_hash == stored_hash
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """
-    Hash a password
+    Hash a password using SHA256 (no length limit)
     
     Args:
-        password: Plain text password
+        password: Plain text password (any length)
         
     Returns:
-        Hashed password
+        Hashed password (format: salt:hash)
     """
-    return pwd_context.hash(password)
+    # Generate a random salt
+    salt = secrets.token_hex(16)
+    # Hash password + salt
+    password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+    # Return salt:hash format
+    return f"{salt}:{password_hash}"
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

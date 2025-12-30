@@ -45,7 +45,7 @@ class PostsMongoDBClient:
     def _create_indexes(self) -> None:
         """Create indexes on the posts collection."""
         try:
-            if not self.collection:
+            if self.collection is None:
                 raise RuntimeError("MongoDB collection not initialized")
             
             # Create index on user_id
@@ -75,10 +75,13 @@ class PostsMongoDBClient:
             True if successful, False otherwise
         """
         try:
-            if not self.collection:
+            if self.collection is None:
                 raise RuntimeError("MongoDB collection not initialized")
             
-            post_doc = metadata.to_dict()
+            if isinstance(metadata, dict):
+                post_doc = metadata
+            else:
+                post_doc = metadata.to_dict()
             
             result = self.collection.insert_one(post_doc)
             
@@ -107,7 +110,7 @@ class PostsMongoDBClient:
             Post document if found, None otherwise
         """
         try:
-            if not self.collection:
+            if self.collection is None:
                 raise RuntimeError("MongoDB collection not initialized")
             
             post = self.collection.find_one({"post_id": post_id})
@@ -136,7 +139,7 @@ class PostsMongoDBClient:
             List of post documents
         """
         try:
-            if not self.collection:
+            if self.collection is None:
                 raise RuntimeError("MongoDB collection not initialized")
             
             posts = list(
@@ -170,7 +173,7 @@ class PostsMongoDBClient:
             True if successful, False otherwise
         """
         try:
-            if not self.collection:
+            if self.collection is None:
                 raise RuntimeError("MongoDB collection not initialized")
             
             result = self.collection.delete_one({"post_id": post_id})
@@ -189,6 +192,43 @@ class PostsMongoDBClient:
             logger.error(f"Unexpected error deleting post: {str(e)}")
             return False
     
+    def get_posts_by_users(self, user_ids: List[str], limit: int = 50, skip: int = 0) -> List[dict]:
+        """
+        Retrieve posts from specific users (for feed with followed users).
+        
+        Args:
+            user_ids: List of user IDs to get posts from
+            limit: Maximum number of posts to return
+            skip: Number of posts to skip for pagination
+            
+        Returns:
+            List of post documents
+        """
+        try:
+            if self.collection is None:
+                raise RuntimeError("MongoDB collection not initialized")
+            
+            posts = list(
+                self.collection.find({"user_id": {"$in": user_ids}})
+                .sort("created_at", -1)
+                .skip(skip)
+                .limit(limit)
+            )
+            
+            # Convert ObjectId to string
+            for post in posts:
+                if "_id" in post:
+                    post["_id"] = str(post["_id"])
+            
+            return posts
+            
+        except PyMongoError as e:
+            logger.error(f"Error retrieving posts by users from MongoDB: {str(e)}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error retrieving posts by users: {str(e)}")
+            return []
+    
     def get_all_posts(self, limit: int = 50, skip: int = 0) -> List[dict]:
         """
         Retrieve all posts (for feed).
@@ -201,7 +241,7 @@ class PostsMongoDBClient:
             List of post documents
         """
         try:
-            if not self.collection:
+            if self.collection is None:
                 raise RuntimeError("MongoDB collection not initialized")
             
             posts = list(
@@ -234,4 +274,5 @@ class PostsMongoDBClient:
 
 # Global MongoDB client instance
 posts_mongodb_client = PostsMongoDBClient()
+
 

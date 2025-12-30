@@ -5,7 +5,7 @@ Implemented by Alisha (Semantic Search & RAG)
 
 from typing import List, Dict, Optional, Any
 from app.services.ai.vector_store import vector_store
-from app.services.ai.embedding_generator import EmbeddingGenerator
+from app.services.ai.embedding_generator import embedding_generator  # Use shared instance
 from app.db.redis import cache_get, cache_set, cache_key_search, cache_key_chat
 from app.core.config import settings
 from openai import OpenAI
@@ -13,8 +13,8 @@ import logging
 
 logger = logging.getLogger("search_service")
 
-# Initialize embedding generator
-embedding_generator = EmbeddingGenerator()
+# Use the shared embedding generator instance to avoid connection issues
+# embedding_generator is imported from app.services.ai.embedding_generator
 
 # Initialize OpenAI client for RAG
 def get_llm_client():
@@ -145,6 +145,7 @@ def rag_chat(
                 "question": question,
                 "answer": "I'm sorry, I couldn't process your question. Please try again.",
                 "referenced_posts": [],
+                "count": 0,
                 "error": "Failed to generate embedding"
             }
         
@@ -160,7 +161,8 @@ def rag_chat(
             return {
                 "question": question,
                 "answer": "I couldn't find any relevant posts to answer your question. Try uploading some posts first!",
-                "referenced_posts": []
+                "referenced_posts": [],
+                "count": 0
             }
         
         # Step 3: Build context from retrieved posts
@@ -245,6 +247,7 @@ Please provide a helpful answer based on these posts. If the question can't be a
             "question": question,
             "answer": "I'm sorry, I encountered an error processing your question. Please try again.",
             "referenced_posts": [],
+            "count": 0,
             "error": str(e)
         }
 

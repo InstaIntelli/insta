@@ -64,6 +64,11 @@ class Settings(BaseSettings):
     CHROMA_PERSIST_PATH: str = "./chroma_db"
     CHROMA_COLLECTION_NAME: str = "post_embeddings"
     
+    # Graph DB (Neo4j - Social Connections)
+    NEO4J_URI: str = ""
+    NEO4J_USER: str = "neo4j"
+    NEO4J_PASSWORD: str = ""
+    
     # LLM Provider (openai or grok)
     LLM_PROVIDER: str = "openai"  # Options: "openai" or "grok"
     

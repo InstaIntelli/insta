@@ -16,9 +16,11 @@ class EmbeddingGenerator:
     def __init__(self):
         """Initialize OpenAI-compatible client (supports OpenAI and Grok)."""
         # Grok API is OpenAI-compatible, so we can use the same client
+        import httpx
         self.client = OpenAI(
             api_key=settings.api_key,
-            base_url=settings.api_base_url
+            base_url=settings.api_base_url,
+            timeout=httpx.Timeout(30.0, connect=10.0)  # 30s total, 10s connect timeout
         )
     
     def generate_embedding(self, text: str) -> Optional[List[float]]:
@@ -36,9 +38,16 @@ class EmbeddingGenerator:
                 logger.warning("Empty text provided for embedding generation")
                 return None
             
+            # Check if API key is configured
+            if not settings.api_key:
+                logger.error("OpenAI API key not configured. Please set OPENAI_API_KEY in environment variables.")
+                return None
+            
+            logger.debug(f"Generating embedding for text (length: {len(text)})")
             response = self.client.embeddings.create(
                 model=settings.embedding_model,
-                input=text
+                input=text,
+                timeout=30.0  # Explicit timeout in seconds
             )
             
             embedding = response.data[0].embedding
@@ -47,6 +56,9 @@ class EmbeddingGenerator:
             
         except Exception as e:
             logger.error(f"Error generating embedding: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return None
     
     def prepare_embedding_content(
