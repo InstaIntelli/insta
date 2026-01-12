@@ -26,3 +26,9 @@ echo "Access MinIO Console at http://localhost:9001"
 echo "Default credentials: minioadmin / minioadmin123"
 
 
+
+
+
+
+
+

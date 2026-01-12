@@ -1,15 +1,84 @@
 /**
  * Post Card Component
- * Modern, Instagram-like post display
+ * Modern, Instagram-like post display with social features
  */
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { socialService } from '../services/socialService'
+import { getUser } from '../utils/auth'
+import CommentSection from './CommentSection'
 import './PostCard.css'
 
 function PostCard({ post }) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const [liked, setLiked] = useState(post.liked || false)
+  const [likeCount, setLikeCount] = useState(post.like_count || 0)
+  const [showComments, setShowComments] = useState(false)
+  const [commentCount, setCommentCount] = useState(post.comment_count || 0)
+  const [isLiking, setIsLiking] = useState(false)
+  const currentUser = getUser()
+
+  // Check like status on mount
+  useEffect(() => {
+    if (currentUser && post.post_id) {
+      checkLikeStatus()
+    }
+  }, [post.post_id, currentUser])
+
+  const checkLikeStatus = async () => {
+    try {
+      const response = await socialService.checkLikeStatus?.(post.post_id) || 
+                       { liked: post.liked || false }
+      setLiked(response.liked || false)
+    } catch (err) {
+      console.error('Error checking like status:', err)
+    }
+  }
+
+  const handleLike = async () => {
+    if (!currentUser) {
+      alert('Please log in to like posts')
+      return
+    }
+
+    if (isLiking) return
+    setIsLiking(true)
+
+    try {
+      if (liked) {
+        await socialService.unlikePost(post.post_id)
+        setLiked(false)
+        setLikeCount(prev => Math.max(0, prev - 1))
+      } else {
+        await socialService.likePost(post.post_id)
+        setLiked(true)
+        setLikeCount(prev => prev + 1)
+      }
+    } catch (err) {
+      console.error('Error liking post:', err)
+      alert(err.response?.data?.detail || 'Failed to like post')
+    } finally {
+      setIsLiking(false)
+    }
+  }
+
+  const handleCommentClick = () => {
+    if (!currentUser) {
+      alert('Please log in to comment')
+      return
+    }
+    setShowComments(!showComments)
+  }
+
+  const handleCommentAdded = () => {
+    setCommentCount(prev => prev + 1)
+  }
+
+  const handleCommentDeleted = () => {
+    setCommentCount(prev => Math.max(0, prev - 1))
+  }
 
   return (
     <article className="post-card fade-in">
@@ -62,10 +131,19 @@ function PostCard({ post }) {
 
       {/* Post Actions */}
       <div className="post-actions">
-        <button className="action-btn like-btn" aria-label="Like">
-          <span>❤️</span>
+        <button 
+          className={`action-btn like-btn ${liked ? 'liked' : ''}`} 
+          aria-label="Like"
+          onClick={handleLike}
+          disabled={isLiking}
+        >
+          <span>{liked ? '❤️' : '🤍'}</span>
         </button>
-        <button className="action-btn comment-btn" aria-label="Comment">
+        <button 
+          className="action-btn comment-btn" 
+          aria-label="Comment"
+          onClick={handleCommentClick}
+        >
           <span>💬</span>
         </button>
         <button className="action-btn share-btn" aria-label="Share">
@@ -78,9 +156,9 @@ function PostCard({ post }) {
 
       {/* Post Content */}
       <div className="post-content">
-        {post.likes_count > 0 && (
+        {likeCount > 0 && (
           <div className="post-likes">
-            <strong>{post.likes_count}</strong> likes
+            <strong>{likeCount}</strong> {likeCount === 1 ? 'like' : 'likes'}
           </div>
         )}
         
@@ -117,7 +195,26 @@ function PostCard({ post }) {
             })}
           </div>
         )}
+
+        {/* View Comments Link */}
+        {commentCount > 0 && !showComments && (
+          <button 
+            className="view-comments-btn"
+            onClick={handleCommentClick}
+          >
+            View all {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
+          </button>
+        )}
       </div>
+
+      {/* Comment Section */}
+      {showComments && (
+        <CommentSection 
+          postId={post.post_id}
+          onCommentAdded={handleCommentAdded}
+          onCommentDeleted={handleCommentDeleted}
+        />
+      )}
     </article>
   )
 }

@@ -1,0 +1,232 @@
+/* Recommendations Page Styles */
+
+.recommendations-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  animation: fadeIn 0.3s ease;
+}
+
+.recommendations-header {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.recommendations-header h1 {
+  font-size: 2.5rem;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Tabs */
+.recommendations-tabs {
+  display: flex;
+  gap: var(--spacing-md);
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: var(--spacing-2xl);
+  overflow-x: auto;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab.active {
+  color: #0095f6;
+  border-bottom-color: #0095f6;
+}
+
+/* Content */
+.recommendations-content {
+  animation: fadeIn 0.3s ease;
+}
+
+.section-header {
+  margin-bottom: var(--spacing-xl);
+  text-align: center;
+}
+
+.section-header h2 {
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.section-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+/* Posts Grid */
+.posts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* Users Grid */
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.user-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: var(--spacing-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.user-link {
+  text-decoration: none;
+  color: inherit;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.user-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #f09433 0%, #dc2743 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 2rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.user-info {
+  width: 100%;
+  margin-bottom: var(--spacing-md);
+}
+
+.user-username {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.user-reason {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.user-stats {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.follow-btn-small {
+  background: #0095f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.follow-btn-small:hover:not(:disabled) {
+  background: #0084d9;
+}
+
+.follow-btn-small:disabled {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-2xl);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Loading & Error States */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: var(--spacing-lg);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-color);
+  border-top-color: #0095f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-icon {
+  font-size: 3rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .recommendations-container {
+    padding: var(--spacing-md);
+  }
+
+  .recommendations-header h1 {
+    font-size: 2rem;
+  }
+
+  .users-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header h2 {
+    font-size: 1.5rem;
+  }
+}
+

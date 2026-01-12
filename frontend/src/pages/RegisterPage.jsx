@@ -5,6 +5,7 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authService } from '../services/authService'
+import { googleAuthService } from '../services/googleAuthService'
 import './Auth.css'
 
 function RegisterPage() {
@@ -61,6 +62,18 @@ function RegisterPage() {
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Please try again.')
     } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      await googleAuthService.signInWithGoogle()
+      // User will be redirected to Google OAuth page
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to sign in with Google')
       setLoading(false)
     }
   }
@@ -176,6 +189,16 @@ function RegisterPage() {
           <div className="auth-divider">
             <span>OR</span>
           </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="btn-google modern-btn"
+          >
+            <span className="google-icon">🔍</span>
+            Continue with Google
+          </button>
 
           <div className="auth-footer">
             <p>

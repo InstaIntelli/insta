@@ -32,8 +32,10 @@ def init_db():
         engine = create_engine(
             settings.POSTGRES_URL,
             pool_pre_ping=True,
-            pool_size=10,
-            max_overflow=20
+            pool_size=20,  # Increased for better concurrency
+            max_overflow=40,  # Increased for peak loads
+            pool_recycle=3600,  # Recycle connections after 1 hour
+            echo=False  # Disable SQL logging for performance
         )
         
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -61,18 +63,25 @@ def create_tables():
 def get_db() -> Generator[Session, None, None]:
     """
     Dependency for FastAPI endpoints to get database session
+    Uses failover manager if available, otherwise falls back to original
     
     Yields:
         Database session
     """
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialized")
-    
-    db = SessionLocal()
     try:
-        yield db
-    finally:
-        db.close()
+        # Try to use failover manager first
+        from app.db.postgres.failover import get_db as get_db_failover
+        yield from get_db_failover()
+    except (ImportError, RuntimeError):
+        # Fallback to original implementation
+        if SessionLocal is None:
+            raise RuntimeError("Database not initialized")
+        
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
 
 
 # Initialize database on import

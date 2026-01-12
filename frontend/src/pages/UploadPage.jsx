@@ -36,23 +36,40 @@ function UploadPage() {
     setLoading(true)
 
     try {
+      // Get user_id from localStorage
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      const userId = user.user_id
+      
+      if (!userId) {
+        setError('User not found. Please login again.')
+        setLoading(false)
+        return
+      }
+
       const formData = new FormData()
-      formData.append('image', file)
-      if (caption) formData.append('caption', caption)
-      if (text) formData.append('text', text)
+      formData.append('file', file)  // Backend expects 'file', not 'image'
+      formData.append('user_id', userId)  // Required by backend
+      // Combine caption and text if both provided
+      const combinedText = caption ? (text ? `${caption}\n\n${text}` : caption) : text
+      if (combinedText) formData.append('text', combinedText)
 
       // Upload post
       const response = await postService.uploadPost(formData)
       const postId = response.post_id
 
-      // Trigger AI processing (background)
+      // Trigger AI processing (background) - optional, don't fail if it errors
       if (postId) {
-        await aiService.processPost({
-          post_id: postId,
-          user_id: response.user_id,
-          text: text,
-          image_url: response.image_url
-        })
+        try {
+          await aiService.processPost({
+            post_id: postId,
+            user_id: userId,
+            text: combinedText || '',
+            image_url: response.image_url
+          })
+        } catch (aiError) {
+          console.warn('AI processing failed (non-critical):', aiError)
+          // Don't fail the upload if AI processing fails
+        }
       }
 
       navigate('/feed')

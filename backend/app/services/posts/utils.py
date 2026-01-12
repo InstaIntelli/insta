@@ -47,3 +47,4 @@ def get_storage_path(post_id: str, filename: str, folder: str = "originals") -> 
     extension = get_file_extension(filename)
     return f"{folder}/{post_id}{extension}"
 
+

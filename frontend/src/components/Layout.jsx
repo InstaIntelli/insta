@@ -29,7 +29,9 @@ function Layout({ children }) {
   const navItems = [
     { path: '/feed', icon: '🏠', label: 'Home', activeIcon: '🏠' },
     { path: '/search', icon: '🔍', label: 'Search', activeIcon: '🔎' },
+    { path: '/recommendations', icon: '🔍', label: 'Discover', activeIcon: '✨' },
     { path: '/upload', icon: '➕', label: 'Create', activeIcon: '✨' },
+    { path: '/analytics', icon: '📊', label: 'Analytics', activeIcon: '📈' },
     { path: '/chat', icon: '💬', label: 'Chat', activeIcon: '💬' },
     { path: `/profile/${user.user_id}`, icon: '👤', label: 'Profile', activeIcon: '👤' }
   ]
@@ -84,14 +86,22 @@ function Layout({ children }) {
 
               {showMenu && (
                 <div className="dropdown-menu">
-                  <button onClick={handleLogout} className="dropdown-item">
-                    <span>🚪</span>
-                    <span>Logout</span>
-                  </button>
+                  <Link to="/analytics" className="dropdown-item">
+                    <span>📊</span>
+                    <span>Analytics</span>
+                  </Link>
+                  <Link to="/recommendations" className="dropdown-item">
+                    <span>🔍</span>
+                    <span>Discover</span>
+                  </Link>
                   <Link to="/mfa/setup" className="dropdown-item">
                     <span>🔐</span>
                     <span>Security</span>
                   </Link>
+                  <button onClick={handleLogout} className="dropdown-item">
+                    <span>🚪</span>
+                    <span>Logout</span>
+                  </button>
                 </div>
               )}
             </div>

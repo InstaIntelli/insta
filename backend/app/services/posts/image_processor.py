@@ -92,3 +92,4 @@ def get_image_format(extension: str) -> str:
     }
     return format_map.get(extension, 'JPEG')
 
+

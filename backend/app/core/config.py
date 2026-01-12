@@ -42,14 +42,33 @@ class Settings(BaseSettings):
     
     # Database URLs
     POSTGRES_URL: str = ""
+    
+    # Cloud PostgreSQL (Supabase) - Primary
+    SUPABASE_DB_URL: str = ""
+    SUPABASE_PROJECT_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_KEY: str = ""
+    
+    # MongoDB
     MONGODB_URL: str = ""
     MONGODB_DATABASE: str = "instaintelli"
     MONGODB_POSTS_COLLECTION: str = "posts"
+    
+    # Cloud MongoDB (Atlas) - Primary
+    MONGODB_ATLAS_URL: str = ""
+    MONGODB_ATLAS_DATABASE: str = "instaintelli"
+    
+    # Redis
     REDIS_URL: str = ""
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
+    
+    # Cloud Redis (Upstash) - Primary
+    UPSTASH_REDIS_URL: str = ""
+    UPSTASH_REDIS_REST_URL: str = ""
+    UPSTASH_REDIS_REST_TOKEN: str = ""
     
     # Storage
     MINIO_ENDPOINT: str = ""

@@ -201,13 +201,14 @@
   display: flex;
   justify-content: center;
   min-height: 100vh;
-  padding: 0 20px;
+  padding: 0;
+  background-color: var(--bg-secondary);
 }
 
 .content-wrapper {
   width: 100%;
-  max-width: 630px;
-  padding: 20px 0;
+  max-width: 100%;
+  padding: 0;
 }
 
 /* Mobile Bottom Navigation */

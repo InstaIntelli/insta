@@ -130,29 +130,17 @@ async def upload_post(
         logger.info(f"Post uploaded successfully: {post_id}")
         
         # Trigger AI processing for embedding generation (background task)
-        def trigger_ai_processing():
-            """Trigger AI processing in background"""
-            try:
-                import httpx
-                response = httpx.post(
-                    "http://localhost:8000/api/v1/ai/process_post",
-                    json={
-                        "post_id": post_id,
-                        "user_id": user_id,
-                        "text": text,
-                        "image_url": original_url
-                    },
-                    timeout=5.0
-                )
-                if response.status_code == 202:
-                    logger.info(f"AI processing triggered for post: {post_id}")
-                else:
-                    logger.warning(f"AI processing returned status {response.status_code} for {post_id}")
-            except Exception as e:
-                logger.warning(f"Failed to trigger AI processing for {post_id}: {str(e)}")
-                # Don't fail the upload if AI processing fails
+        # Import here to avoid circular dependencies
+        from app.services.ai.background_worker import process_post_background
         
-        background_tasks.add_task(trigger_ai_processing)
+        background_tasks.add_task(
+            process_post_background,
+            post_id=post_id,
+            user_id=user_id,
+            text=text,
+            image_url=original_url
+        )
+        logger.info(f"AI processing queued for post: {post_id}")
         
         return UploadPostResponse(
             post_id=post_id,

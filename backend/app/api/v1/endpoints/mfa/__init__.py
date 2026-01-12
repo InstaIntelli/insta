@@ -126,11 +126,16 @@ async def enable_mfa_endpoint(
                 detail="MFA not setup. Call /setup first."
             )
         
+        # Log for debugging
+        logger.info(f"Attempting to enable MFA for user {user.user_id} with code: {request.code}")
+        logger.info(f"User has MFA secret: {bool(user.mfa_secret)}, Secret length: {len(user.mfa_secret) if user.mfa_secret else 0}")
+        
         # Verify and enable MFA
         if not enable_mfa(user, request.code, db):
+            logger.warning(f"MFA enable failed for user {user.user_id} with code: {request.code}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid verification code"
+                detail="Invalid verification code. Make sure you're using the code from the QR code you just scanned, and that your device clock is synced."
             )
         
         return {
@@ -300,4 +305,5 @@ async def health_check():
         "status": "healthy",
         "service": "MFA Service"
     }
+
 

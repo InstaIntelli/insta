@@ -3,8 +3,8 @@
 .post-card {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  margin-bottom: 20px;
+  border-radius: 0;
+  margin-bottom: 24px;
   animation: fadeInUp 0.4s ease;
 }
 
@@ -186,6 +186,14 @@
   animation: heartBeat 0.5s ease;
 }
 
+.like-btn.liked {
+  animation: none;
+}
+
+.like-btn.liked span {
+  filter: drop-shadow(0 0 4px rgba(220, 39, 67, 0.5));
+}
+
 @keyframes heartBeat {
   0%, 100% { transform: scale(1); }
   25% { transform: scale(1.2); }
@@ -265,6 +273,22 @@
   margin-top: 4px;
   text-transform: uppercase;
   letter-spacing: 0.2px;
+}
+
+.view-comments-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 4px;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+.view-comments-btn:hover {
+  color: var(--text-primary);
 }
 
 /* Mobile Responsive */

@@ -119,19 +119,18 @@ class PostsStorageClient:
     def get_public_url(self, object_name: str) -> str:
         """
         Generate public URL for an object.
+        Uses direct MinIO URL for optimal performance (milliseconds).
         
         Args:
             object_name: Object name (path) in the bucket
             
         Returns:
-            Public URL string
+            Public URL string (direct MinIO access for speed)
         """
-        endpoint = settings.MINIO_ENDPOINT.replace("http://", "").replace("https://", "")
-        bucket_name = settings.MINIO_BUCKET_NAME or "instaintelli"
-        
-        # Construct URL (assuming MinIO is accessible at the endpoint)
-        url = f"http://{endpoint}/{bucket_name}/{object_name}"
-        
+        # Use direct MinIO URL for maximum performance
+        # MinIO is configured for public read access
+        bucket_name = settings.MINIO_BUCKET_NAME or "instaintelli-media"
+        url = f"http://localhost:9000/{bucket_name}/{object_name}"
         return url
     
     def delete_file(self, object_name: str) -> bool:
@@ -168,4 +167,5 @@ class PostsStorageClient:
 
 # Global storage client instance
 posts_storage_client = PostsStorageClient()
+
 

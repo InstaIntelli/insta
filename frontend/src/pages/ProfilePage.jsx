@@ -6,6 +6,8 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { userService } from '../services/userService'
 import { mfaService } from '../services/mfaService'
+import { socialService } from '../services/socialService'
+import { getUser } from '../utils/auth'
 import './Profile.css'
 
 function ProfilePage() {
@@ -18,20 +20,90 @@ function ProfilePage() {
   const [showDisableMFA, setShowDisableMFA] = useState(false)
   const [disableCode, setDisableCode] = useState('')
   const [mfaError, setMfaError] = useState('')
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [isFollowingLoading, setIsFollowingLoading] = useState(false)
+  const [followersCount, setFollowersCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
+  const currentUser = getUser()
+  const isOwnProfile = currentUser && currentUser.user_id === userId
 
   useEffect(() => {
     loadUser()
-    loadMFAStatus()
-  }, [userId])
+    if (isOwnProfile) {
+      loadMFAStatus()
+    }
+    if (!isOwnProfile && userId) {
+      loadFollowStatus()
+      loadSocialStats()
+    }
+  }, [userId, isOwnProfile])
 
   const loadUser = async () => {
     try {
       const data = await userService.getUser(userId)
       setUser(data)
+      // Update counts from user data if available
+      if (data.followers_count !== undefined) setFollowersCount(data.followers_count)
+      if (data.following_count !== undefined) setFollowingCount(data.following_count)
     } catch (err) {
       setError('Failed to load user profile')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadFollowStatus = async () => {
+    if (!currentUser) return
+    try {
+      const response = await socialService.checkFollowing(userId)
+      setIsFollowing(response.is_following || false)
+    } catch (err) {
+      console.error('Error loading follow status:', err)
+    }
+  }
+
+  const loadSocialStats = async () => {
+    try {
+      const response = await socialService.getUserStats?.(userId) || {}
+      if (response.follower_count !== undefined) setFollowersCount(response.follower_count)
+      if (response.following_count !== undefined) setFollowingCount(response.following_count)
+    } catch (err) {
+      // Try alternative endpoint
+      try {
+        const followers = await socialService.getFollowers(userId)
+        const following = await socialService.getFollowing(userId)
+        setFollowersCount(followers.count || followers.followers?.length || 0)
+        setFollowingCount(following.count || following.following?.length || 0)
+      } catch (e) {
+        console.error('Error loading social stats:', e)
+      }
+    }
+  }
+
+  const handleFollow = async () => {
+    if (!currentUser) {
+      navigate('/login')
+      return
+    }
+
+    if (isFollowingLoading) return
+    setIsFollowingLoading(true)
+
+    try {
+      if (isFollowing) {
+        await socialService.unfollowUser(userId)
+        setIsFollowing(false)
+        setFollowersCount(prev => Math.max(0, prev - 1))
+      } else {
+        await socialService.followUser(userId)
+        setIsFollowing(true)
+        setFollowersCount(prev => prev + 1)
+      }
+    } catch (err) {
+      console.error('Error following user:', err)
+      alert(err.response?.data?.detail || 'Failed to follow user')
+    } finally {
+      setIsFollowingLoading(false)
     }
   }
 
@@ -81,17 +153,29 @@ function ProfilePage() {
           )}
         </div>
         <div className="profile-info">
-          <h1>{user.username}</h1>
+          <div className="profile-header-top">
+            <h1>{user.username}</h1>
+            {!isOwnProfile && currentUser && (
+              <button
+                className={`follow-btn ${isFollowing ? 'following' : ''}`}
+                onClick={handleFollow}
+                disabled={isFollowingLoading}
+              >
+                {isFollowingLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
+              </button>
+            )}
+          </div>
           <p>{user.bio || 'No bio yet'}</p>
           <div className="profile-stats">
             <span><strong>{user.posts_count || 0}</strong> posts</span>
-            <span><strong>{user.followers_count || 0}</strong> followers</span>
-            <span><strong>{user.following_count || 0}</strong> following</span>
+            <span><strong>{followersCount}</strong> followers</span>
+            <span><strong>{followingCount}</strong> following</span>
           </div>
         </div>
       </div>
 
-      {/* MFA Section */}
+      {/* MFA Section - Only show on own profile */}
+      {isOwnProfile && (
       <div className="profile-section mfa-section">
         <h2>🔐 Two-Factor Authentication</h2>
         <div className="mfa-status-card">
@@ -148,6 +232,7 @@ function ProfilePage() {
           )}
         </div>
       </div>
+      )}
     </div>
   )
 }

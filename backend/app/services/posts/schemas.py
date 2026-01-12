@@ -67,3 +67,4 @@ class PostsListResponse(BaseModel):
     posts: list
     count: int
 
+

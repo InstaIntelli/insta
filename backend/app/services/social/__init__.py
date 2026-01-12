@@ -507,3 +507,4 @@ def get_unread_count(user_id: str) -> int:
         logger.error(f"Error getting unread count: {str(e)}")
         return 0
 
+

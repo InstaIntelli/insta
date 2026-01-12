@@ -398,3 +398,4 @@ print(f"Total embeddings: {collection.count()}")
 - **MinIO Docs**: https://min.io/docs/
 - **ChromaDB Docs**: https://docs.trychroma.com/
 
+

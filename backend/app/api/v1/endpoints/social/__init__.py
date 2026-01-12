@@ -332,3 +332,4 @@ async def get_unread_count_endpoint(
     count = get_unread_count(current_user["user_id"])
     return {"unread_count": count}
 
+

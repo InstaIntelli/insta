@@ -45,7 +45,15 @@ function MFASetup() {
     setError('')
 
     try {
-      await mfaService.enableMFA(verificationCode)
+      // Ensure code has no spaces and is exactly 6 digits
+      const cleanCode = verificationCode.replace(/\s/g, '').replace(/\D/g, '').slice(0, 6)
+      if (cleanCode.length !== 6) {
+        setError('Please enter a 6-digit code')
+        setLoading(false)
+        return
+      }
+      
+      await mfaService.enableMFA(cleanCode)
       setStep(3) // Show recovery codes
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid verification code')
@@ -146,7 +154,11 @@ function MFASetup() {
                 <input
                   type="text"
                   value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => {
+                    // Remove all non-digits and limit to 6 characters
+                    const cleanCode = e.target.value.replace(/\D/g, '').slice(0, 6)
+                    setVerificationCode(cleanCode)
+                  }}
                   placeholder="000000"
                   maxLength="6"
                   className="code-input"
@@ -229,4 +241,5 @@ function MFASetup() {
 }
 
 export default MFASetup
+
 

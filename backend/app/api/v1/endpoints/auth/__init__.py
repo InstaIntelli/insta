@@ -5,11 +5,12 @@ Authentication endpoints
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, validator
 from typing import Optional
+import re
 
 from app.db.postgres import get_db
-from app.services.auth import create_user, authenticate_user, get_user_by_user_id
+from app.services.auth import create_user, authenticate_user, get_user_by_user_id, get_user_by_email, get_user_by_username
 from app.core.security import create_access_token, get_current_user
 import logging
 
@@ -20,15 +21,31 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # Pydantic schemas
 class UserRegister(BaseModel):
-    email: EmailStr
+    email: str
     username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=6, max_length=50)
     full_name: Optional[str] = None
+
+    @validator('email')
+    def validate_email(cls, v):
+        # Simple email validation
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, v):
+            raise ValueError('Invalid email format')
+        return v.lower()
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
+
+    @validator('email')
+    def validate_email(cls, v):
+        # Simple email validation
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, v):
+            raise ValueError('Invalid email format')
+        return v.lower()
 
 
 class Token(BaseModel):
@@ -316,6 +333,132 @@ async def logout():
         Success message
     """
     return {"message": "Logged out successfully"}
+
+
+@router.get("/oauth/google/url")
+async def get_google_oauth_url(redirect_to: str = "http://localhost:3000/auth/callback"):
+    """
+    Get Google OAuth URL
+    
+    Args:
+        redirect_to: URL to redirect after OAuth (default: frontend callback)
+        
+    Returns:
+        OAuth URL
+    """
+    try:
+        from app.services.auth.supabase_auth import supabase_auth
+        
+        if not supabase_auth.is_configured():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Google OAuth not configured. Please configure Supabase credentials."
+            )
+        
+        oauth_url = supabase_auth.get_google_oauth_url(redirect_to)
+        
+        if not oauth_url:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to generate OAuth URL"
+            )
+        
+        return {"oauth_url": oauth_url}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating Google OAuth URL: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate OAuth URL"
+        )
+
+
+@router.post("/oauth/google/callback")
+async def handle_google_oauth_callback(
+    code: str,
+    redirect_to: str = "http://localhost:3000/auth/callback",
+    db: Session = Depends(get_db)
+):
+    """
+    Handle Google OAuth callback
+    
+    Args:
+        code: OAuth authorization code
+        redirect_to: Redirect URL used in OAuth flow
+        db: Database session
+        
+    Returns:
+        User data and access token
+    """
+    try:
+        from app.services.auth.supabase_auth import supabase_auth
+        
+        if not supabase_auth.is_configured():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Google OAuth not configured"
+            )
+        
+        # Exchange code for session
+        session_data = supabase_auth.verify_oauth_callback(code, redirect_to)
+        
+        if not session_data:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid OAuth code or failed to authenticate"
+            )
+        
+        supabase_user = session_data["user"]
+        email = supabase_user["email"]
+        
+        # Check if user exists in our database
+        user = get_user_by_email(db, email)
+        
+        if not user:
+            # Create new user from Google OAuth
+            username = email.split("@")[0]  # Use email prefix as username
+            # Ensure username is unique
+            base_username = username
+            counter = 1
+            while get_user_by_username(db, username):
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            user = create_user(
+                db=db,
+                email=email,
+                username=username,
+                password=None,  # No password for OAuth users
+                full_name=supabase_user.get("full_name")
+            )
+            
+            logger.info(f"Created new user from Google OAuth: {email}")
+        
+        # Generate our JWT token
+        access_token = create_access_token(
+            data={
+                "sub": user.user_id,
+                "email": user.email,
+                "username": user.username
+            }
+        )
+        
+        return {
+            "user": user.to_safe_dict(),
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Google OAuth callback error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="OAuth authentication failed"
+        )
 
 
 @router.get("/health")

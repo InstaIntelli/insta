@@ -29,6 +29,12 @@ app = FastAPI(
 async def startup_event():
     """Initialize database tables on startup"""
     try:
+        # Initialize failover managers
+        from app.db.postgres.failover import postgres_failover
+        from app.db.mongodb.failover import mongo_failover
+        from app.db.redis.failover import redis_failover
+        
+        # Create tables using current engine (will use primary or fallback)
         from app.db.postgres import create_tables
         create_tables()
         
@@ -36,7 +42,13 @@ async def startup_event():
         from app.db.neo4j import init_neo4j
         init_neo4j()
         
-        logger.info("Application startup complete")
+        # Log database status
+        logger.info("📊 Database Status:")
+        logger.info(f"  PostgreSQL: {postgres_failover.get_status()}")
+        logger.info(f"  MongoDB: {mongo_failover.get_status()}")
+        logger.info(f"  Redis: {redis_failover.get_status()}")
+        
+        logger.info("✅ Application startup complete")
     except Exception as e:
         logger.error(f"Error during startup: {str(e)}")
         # Don't fail startup if database initialization fails
@@ -52,7 +64,7 @@ app.add_middleware(
 )
 
 # API routers - integrated from team members
-from app.api.v1.endpoints import auth, users, posts, ai, search, mfa, social
+from app.api.v1.endpoints import auth, users, posts, ai, search, mfa, social, recommendations, analytics, health
 
 # Register routers
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
@@ -62,6 +74,9 @@ app.include_router(posts.router, prefix="/api/v1", tags=["Posts"])
 app.include_router(ai.router, prefix="/api/v1", tags=["AI Processing"])
 app.include_router(search.router, prefix="/api/v1", tags=["Search & RAG"])
 app.include_router(social.router, prefix="/api/v1", tags=["Social Features"])
+app.include_router(recommendations.router, prefix="/api/v1/recommendations", tags=["Recommendations"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+app.include_router(health.router, prefix="/api/v1", tags=["Health"])
 
 
 @app.get("/")

@@ -107,9 +107,25 @@ def verify_totp_code(secret: str, code: str) -> bool:
         True if code is valid, False otherwise
     """
     try:
+        # Clean the code - remove spaces and ensure it's 6 digits
+        clean_code = code.replace(' ', '').replace('-', '').strip()
+        if len(clean_code) != 6 or not clean_code.isdigit():
+            logger.warning(f"Invalid code format: {code} (cleaned: {clean_code})")
+            return False
+        
         totp = pyotp.TOTP(secret)
-        # Allow 1 time step before and after for clock drift
-        return totp.verify(code, valid_window=1)
+        # Allow 2 time steps before and after for clock drift (60 seconds each side)
+        # This gives more tolerance for time sync issues
+        result = totp.verify(clean_code, valid_window=2)
+        
+        if not result:
+            # Debug: Try to see what the current code should be
+            current_code = totp.now()
+            logger.warning(f"TOTP verification failed. Code provided: {clean_code}, Current code: {current_code}, Secret length: {len(secret)}")
+        else:
+            logger.info(f"TOTP verification successful for code: {clean_code}")
+        
+        return result
     except Exception as e:
         logger.error(f"Error verifying TOTP code: {str(e)}")
         return False
@@ -277,4 +293,5 @@ def regenerate_recovery_codes(user: User, db: Session) -> List[str]:
         logger.error(f"Error regenerating recovery codes: {str(e)}")
         db.rollback()
         raise
+
 

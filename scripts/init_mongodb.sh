@@ -29,3 +29,9 @@ mongosh "${MONGODB_DB:-instaintelli}" --eval "
 echo "MongoDB initialization complete!"
 
 
+
+
+
+
+
+

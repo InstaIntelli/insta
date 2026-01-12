@@ -1,11 +1,17 @@
 """
-MongoDB database connection and client
-To be implemented by Sami (Post Upload & Media Storage)
+MongoDB connection with failover support
 """
 
-# Placeholder for:
-# - MongoDB client
-# - Database instance
-# - Collection references
-# - Connection management
+from app.db.mongodb.failover import (
+    get_mongo_db,
+    get_mongo_collection,
+    get_mongo_status,
+    mongo_failover
+)
 
+__all__ = [
+    "get_mongo_db",
+    "get_mongo_collection", 
+    "get_mongo_status",
+    "mongo_failover"
+]

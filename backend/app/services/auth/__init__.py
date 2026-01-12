@@ -3,7 +3,7 @@ Authentication service layer
 """
 
 import uuid
-from typing import Optional
+from typing import Optional, List, Dict
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
@@ -73,11 +73,32 @@ def get_user_by_user_id(db: Session, user_id: str) -> Optional[User]:
         return None
 
 
+def get_users_by_user_ids(db: Session, user_ids: List[str]) -> Dict[str, User]:
+    """
+    Get multiple users by their user_ids in batch (optimized for performance).
+    
+    Args:
+        db: Database session
+        user_ids: List of user IDs
+        
+    Returns:
+        Dictionary mapping user_id to User object
+    """
+    try:
+        if not user_ids:
+            return {}
+        users = db.query(User).filter(User.user_id.in_(user_ids)).all()
+        return {user.user_id: user for user in users}
+    except Exception as e:
+        logger.error(f"Error getting users by user_ids: {str(e)}")
+        return {}
+
+
 def create_user(
     db: Session,
     email: str,
     username: str,
-    password: str,
+    password: Optional[str] = None,
     full_name: Optional[str] = None
 ) -> User:
     """
@@ -114,7 +135,8 @@ def create_user(
         
         # Create new user
         user_id = generate_user_id()
-        hashed_password = get_password_hash(password)
+        # Hash password only if provided (OAuth users don't have passwords)
+        hashed_password = get_password_hash(password) if password else None
         
         db_user = User(
             user_id=user_id,
@@ -157,6 +179,10 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     try:
         user = get_user_by_email(db, email)
         if not user:
+            return None
+        
+        # OAuth users may not have a password
+        if not user.hashed_password:
             return None
         
         if not verify_password(password, user.hashed_password):

@@ -1,11 +1,13 @@
 /**
- * Feed Page - Modern Instagram-like Feed
+ * Feed Page - Instagram-like Feed with Stories and Sidebar
  */
 
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { postService } from '../services/postService'
 import PostCard from '../components/PostCard'
+import Stories from '../components/Stories'
+import RightSidebar from '../components/RightSidebar'
 import './Feed.css'
 
 function FeedPage() {
@@ -23,6 +25,29 @@ function FeedPage() {
       setPosts(data.posts || [])
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to load feed')
+      // Add mock posts for demo if API fails
+      setPosts([
+        {
+          post_id: 'mock1',
+          user_id: 'user1',
+          username: 'demo_user',
+          image_url: null,
+          caption: 'This is a demo post to show the feed layout!',
+          like_count: 42,
+          comment_count: 5,
+          created_at: new Date().toISOString()
+        },
+        {
+          post_id: 'mock2',
+          user_id: 'user2',
+          username: 'another_user',
+          image_url: null,
+          caption: 'Another post in the feed!',
+          like_count: 128,
+          comment_count: 12,
+          created_at: new Date().toISOString()
+        }
+      ])
     } finally {
       setLoading(false)
     }
@@ -30,30 +55,33 @@ function FeedPage() {
 
   if (loading) {
     return (
-      <div className="feed-container">
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Loading your feed...</p>
+      <div className="feed-page-container">
+        <div className="feed-main-content">
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading your feed...</p>
+          </div>
         </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="feed-container">
-        <div className="error-container">
-          <span className="error-icon">⚠️</span>
-          <p>{error}</p>
-          <button onClick={loadFeed} className="btn-primary">Try Again</button>
-        </div>
+        <RightSidebar />
       </div>
     )
   }
 
   return (
-    <div className="feed-container">
-      <div className="feed-wrapper">
+    <div className="feed-page-container">
+      <div className="feed-main-content">
+        {/* Stories Section */}
+        <Stories />
+
+        {/* Posts Feed */}
+        {error && (
+          <div className="error-banner">
+            <span className="error-icon">⚠️</span>
+            <span>{error}</span>
+            <button onClick={loadFeed} className="retry-btn">Retry</button>
+          </div>
+        )}
+
         {posts.length === 0 ? (
           <div className="empty-feed">
             <div className="empty-feed-icon">📸</div>
@@ -74,6 +102,9 @@ function FeedPage() {
           </div>
         )}
       </div>
+
+      {/* Right Sidebar */}
+      <RightSidebar />
     </div>
   )
 }

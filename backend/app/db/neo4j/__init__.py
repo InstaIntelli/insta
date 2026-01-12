@@ -92,3 +92,4 @@ def close_neo4j():
         driver.close()
         logger.info("Neo4j connection closed")
 
+

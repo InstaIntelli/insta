@@ -16,6 +16,9 @@ import UploadPage from './pages/UploadPage'
 import SearchPage from './pages/SearchPage'
 import ChatPage from './pages/ChatPage'
 import MFASetup from './pages/MFASetup'
+import AnalyticsDashboard from './pages/AnalyticsDashboard'
+import RecommendationsPage from './pages/RecommendationsPage'
+import OAuthCallback from './pages/OAuthCallback'
 import './App.css'
 
 // Protected Route Component
@@ -59,6 +62,10 @@ function App() {
                 <RegisterPage />
               </PublicRoute>
             } 
+          />
+          <Route 
+            path="/auth/callback" 
+            element={<OAuthCallback />} 
           />
           
           {/* Protected Routes with Layout */}
@@ -117,6 +124,26 @@ function App() {
             element={
               <ProtectedRoute>
                 <MFASetup />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnalyticsDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recommendations"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RecommendationsPage />
+                </Layout>
               </ProtectedRoute>
             }
           />

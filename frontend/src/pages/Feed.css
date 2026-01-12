@@ -1,5 +1,21 @@
 /* Instagram-style Feed Page */
 
+.feed-page-container {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  max-width: 935px;
+  margin: 0 auto;
+  padding: 0 20px;
+  width: 100%;
+}
+
+.feed-main-content {
+  flex: 1;
+  max-width: 614px;
+  min-width: 0;
+}
+
 .feed-container {
   width: 100%;
   min-height: 100vh;
@@ -133,12 +149,61 @@
 .posts-feed {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   padding-bottom: 20px;
 }
 
+/* Error Banner */
+.error-banner {
+  background: #fee;
+  color: #c33;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.error-banner .error-icon {
+  font-size: 18px;
+}
+
+.retry-btn {
+  margin-left: auto;
+  background: #dc2743;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: #c11e35;
+}
+
 /* Responsive */
+@media (max-width: 1264px) {
+  .feed-page-container {
+    max-width: 614px;
+  }
+}
+
 @media (max-width: 767px) {
+  .feed-page-container {
+    padding: 0;
+    max-width: 100%;
+  }
+
+  .feed-main-content {
+    max-width: 100%;
+  }
+
   .feed-wrapper {
     max-width: 100%;
   }
