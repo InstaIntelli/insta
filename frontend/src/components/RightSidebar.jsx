@@ -3,12 +3,13 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getUser } from '../utils/auth'
 import { recommendationService } from '../services/recommendationService'
 import './RightSidebar.css'
 
 function RightSidebar() {
+  const navigate = useNavigate()
   const currentUser = getUser()
   const [suggestions, setSuggestions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -46,6 +47,14 @@ function RightSidebar() {
     }
   }
 
+  const handleSwitchAccount = () => {
+    // Clear session and redirect to login
+    localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('user')
+    navigate('/login')
+  }
+
   if (!currentUser) return null
 
   return (
@@ -67,7 +76,13 @@ function RightSidebar() {
             <div className="user-profile-name">{currentUser.full_name || 'InstaIntelli User'}</div>
           </div>
         </Link>
-        <button className="switch-btn">Switch</button>
+        <button 
+          className="switch-btn" 
+          onClick={handleSwitchAccount}
+          type="button"
+        >
+          Switch
+        </button>
       </div>
 
       {/* Suggestions */}

@@ -2,12 +2,13 @@
 Authentication endpoints
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, validator
 from typing import Optional
 import re
+import json
 
 from app.db.postgres import get_db
 from app.services.auth import create_user, authenticate_user, get_user_by_user_id, get_user_by_email, get_user_by_username
@@ -375,20 +376,25 @@ async def get_google_oauth_url(redirect_to: str = "http://localhost:3000/auth/ca
         )
 
 
+class OAuthCallbackRequest(BaseModel):
+    code: Optional[str] = None
+    redirect_to: Optional[str] = "http://localhost:3000/auth/callback"
+    access_token: Optional[str] = None
+    user: Optional[dict] = None
+
+
 @router.post("/oauth/google/callback")
 async def handle_google_oauth_callback(
-    code: str,
-    redirect_to: str = "http://localhost:3000/auth/callback",
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """
     Handle Google OAuth callback
     
-    Args:
-        code: OAuth authorization code
-        redirect_to: Redirect URL used in OAuth flow
-        db: Database session
-        
+    Accepts either:
+    1. Query parameters: code, redirect_to
+    2. JSON body: { code, redirect_to } or { access_token, user, redirect_to }
+    
     Returns:
         User data and access token
     """
@@ -401,17 +407,49 @@ async def handle_google_oauth_callback(
                 detail="Google OAuth not configured"
             )
         
-        # Exchange code for session
-        session_data = supabase_auth.verify_oauth_callback(code, redirect_to)
+        # Try to get from JSON body first, then query params
+        body = {}
+        try:
+            body = await request.json()
+        except:
+            pass
         
-        if not session_data:
+        code = body.get("code") or request.query_params.get("code")
+        redirect_to = body.get("redirect_to") or request.query_params.get("redirect_to", "http://localhost:3000/auth/callback")
+        access_token = body.get("access_token")
+        user = body.get("user")
+        
+        # If access_token and user are provided directly (from Supabase redirect)
+        if access_token and user:
+            email = user.get("email")
+            if not email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email not found in user data"
+                )
+        elif code:
+            # Exchange code for session
+            session_data = supabase_auth.verify_oauth_callback(code, redirect_to)
+            
+            if not session_data:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid OAuth code or failed to authenticate"
+                )
+            
+            supabase_user = session_data["user"]
+            email = supabase_user["email"]
+        else:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid OAuth code or failed to authenticate"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either code or access_token must be provided"
             )
         
-        supabase_user = session_data["user"]
-        email = supabase_user["email"]
+        # Get user data
+        if access_token and user:
+            supabase_user = user
+        else:
+            supabase_user = session_data["user"]
         
         # Check if user exists in our database
         user = get_user_by_email(db, email)

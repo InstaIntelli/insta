@@ -19,6 +19,7 @@ import MFASetup from './pages/MFASetup'
 import AnalyticsDashboard from './pages/AnalyticsDashboard'
 import RecommendationsPage from './pages/RecommendationsPage'
 import OAuthCallback from './pages/OAuthCallback'
+import ProfileSettingsPage from './pages/ProfileSettingsPage'
 import './App.css'
 
 // Protected Route Component
@@ -85,6 +86,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <ProfilePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProfileSettingsPage />
                 </Layout>
               </ProtectedRoute>
             }

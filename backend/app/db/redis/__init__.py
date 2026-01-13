@@ -17,7 +17,8 @@ __all__ = [
     "cache_get",
     "cache_set",
     "cache_key_search",
-    "cache_key_chat"
+    "cache_key_chat",
+    "cache_key_profile"
 ]
 
 
@@ -33,6 +34,11 @@ def cache_key_chat(query: str, user_id: Optional[str] = None) -> str:
     if user_id:
         return f"chat:{hash(query)}:{user_id}"
     return f"chat:{hash(query)}"
+
+
+def cache_key_profile(user_id: str) -> str:
+    """Generate cache key for user profile"""
+    return f"profile:{user_id}"
 
 
 def cache_get(key: str) -> Optional[Any]:

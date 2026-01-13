@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { userService } from '../services/userService'
+import { profileService } from '../services/profileService'
 import { mfaService } from '../services/mfaService'
 import { socialService } from '../services/socialService'
 import { getUser } from '../utils/auth'
@@ -16,6 +16,7 @@ function ProfilePage() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
   const [mfaStatus, setMfaStatus] = useState({ mfa_enabled: false, has_recovery_codes: false })
   const [showDisableMFA, setShowDisableMFA] = useState(false)
   const [disableCode, setDisableCode] = useState('')
@@ -36,19 +37,78 @@ function ProfilePage() {
       loadFollowStatus()
       loadSocialStats()
     }
-  }, [userId, isOwnProfile])
+  }, [userId])
 
-  const loadUser = async () => {
+  // Refresh profile when returning to page (e.g., after editing)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (userId && !loading) {
+        loadUser(true) // Refresh with loading indicator
+      }
+    }
+    
+    // Listen for profile updates from settings page
+    const handleProfileUpdate = () => {
+      if (userId && !loading) {
+        loadUser(true)
+      }
+    }
+    
+    window.addEventListener('focus', handleFocus)
+    window.addEventListener('profileUpdated', handleProfileUpdate)
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('profileUpdated', handleProfileUpdate)
+    }
+  }, [userId, loading])
+
+  const loadUser = async (showRefreshing = false) => {
     try {
-      const data = await userService.getUser(userId)
-      setUser(data)
+      if (showRefreshing) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+        setError('') // Clear previous errors
+      }
+      
+      // Use profile service which has caching
+      let data
+      try {
+        data = await profileService.getUserProfile(userId)
+      } catch (profileErr) {
+        // Fallback to user service if profile service fails
+        console.warn('Profile service failed, trying user service:', profileErr)
+        const { userService } = await import('../services/userService')
+        data = await userService.getUser(userId)
+      }
+      
+      if (!data) {
+        throw new Error('No user data received')
+      }
+      
+      // Map field names (profile_image_url -> profile_picture for compatibility)
+      const mappedData = {
+        ...data,
+        profile_picture: data.profile_image_url || data.profile_picture,
+        profile_image_url: data.profile_image_url || data.profile_picture
+      }
+      
+      setUser(mappedData)
       // Update counts from user data if available
       if (data.followers_count !== undefined) setFollowersCount(data.followers_count)
       if (data.following_count !== undefined) setFollowingCount(data.following_count)
     } catch (err) {
-      setError('Failed to load user profile')
+      console.error('Error loading profile:', err)
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to load user profile'
+      setError(errorMessage)
+      // Don't clear user data if we're just refreshing
+      if (!showRefreshing) {
+        setUser(null)
+      }
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -138,12 +198,58 @@ function ProfilePage() {
     }
   }
 
-  if (loading) return <div className="loading">Loading profile...</div>
-  if (error) return <div className="error">{error}</div>
-  if (!user) return <div className="error">User not found</div>
+  if (loading) {
+    return (
+      <div className="profile-container">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  if (error && !user) {
+    return (
+      <div className="profile-container">
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <p>{error}</p>
+          <button className="btn-retry" onClick={() => loadUser()}>
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+  
+  if (!user) {
+    return (
+      <div className="profile-container">
+        <div className="error-container">
+          <div className="error-icon">👤</div>
+          <p>User not found</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="profile-container">
+      {refreshing && (
+        <div className="refreshing-overlay">
+          <div className="refreshing-indicator">
+            <div className="spinner"></div>
+            <span>Updating profile...</span>
+          </div>
+        </div>
+      )}
+      {error && user && (
+        <div className="error-banner">
+          <span>⚠️ {error}</span>
+          <button onClick={() => loadUser(true)} className="btn-retry-small">Retry</button>
+        </div>
+      )}
       <div className="profile-header">
         <div className="profile-avatar">
           {user.profile_picture ? (
@@ -155,15 +261,24 @@ function ProfilePage() {
         <div className="profile-info">
           <div className="profile-header-top">
             <h1>{user.username}</h1>
-            {!isOwnProfile && currentUser && (
-              <button
-                className={`follow-btn ${isFollowing ? 'following' : ''}`}
-                onClick={handleFollow}
-                disabled={isFollowingLoading}
-              >
-                {isFollowingLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
-              </button>
-            )}
+            <div className="profile-actions">
+              {isOwnProfile ? (
+                <button
+                  className="btn-edit-profile"
+                  onClick={() => navigate('/profile/settings')}
+                >
+                  Edit Profile
+                </button>
+              ) : currentUser && (
+                <button
+                  className={`follow-btn ${isFollowing ? 'following' : ''}`}
+                  onClick={handleFollow}
+                  disabled={isFollowingLoading}
+                >
+                  {isFollowingLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
+                </button>
+              )}
+            </div>
           </div>
           <p>{user.bio || 'No bio yet'}</p>
           <div className="profile-stats">

@@ -17,18 +17,69 @@ function OAuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const code = searchParams.get('code')
-        const error = searchParams.get('error')
+        // Check both query parameters and hash fragments
+        // Supabase may use hash fragments (#) instead of query params (?)
+        const urlParams = new URLSearchParams(window.location.search)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        
+        // Try to get code from query params first, then hash
+        const code = urlParams.get('code') || hashParams.get('code') || searchParams.get('code')
+        const errorParam = urlParams.get('error') || hashParams.get('error') || searchParams.get('error')
+        
+        // Also check for access_token directly in hash (Supabase sometimes returns this)
+        const accessToken = hashParams.get('access_token')
+        
+        console.log('OAuth Callback Debug:', {
+          search: window.location.search,
+          hash: window.location.hash,
+          code,
+          error: errorParam,
+          accessToken: accessToken ? 'present' : 'not present'
+        })
 
-        if (error) {
-          setError(`OAuth error: ${error}`)
+        if (errorParam) {
+          setError(`OAuth error: ${errorParam}`)
           setLoading(false)
           setTimeout(() => navigate('/login'), 3000)
           return
         }
 
+        // If we have an access_token directly, we can use it (Supabase redirect)
+        if (accessToken && !code) {
+          // Supabase redirected with token directly - we need to get user info
+          try {
+            const redirectTo = `${window.location.origin}/auth/callback`
+            // Use the access_token to get user info from Supabase
+            const supabaseUrl = 'https://mrnlqzxvlpjjrjnxngpk.supabase.co'
+            const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ybmxxenh2bHBqanJqbnhuZ3BrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNDEyMDIsImV4cCI6MjA4MzgxNzIwMn0.VJSBn87b7z5ixqUEKeIDZHKh2Ba3aVOcq5ejAu3aIEU'
+              }
+            })
+            
+            if (response.ok) {
+              const userData = await response.json()
+              // Use the service to handle callback
+              await googleAuthService.handleCallback(null, redirectTo, accessToken, userData)
+              navigate('/feed')
+              return
+            } else {
+              throw new Error('Failed to get user info from Supabase')
+            }
+          } catch (err) {
+            console.error('Error handling access_token:', err)
+            setError(err.message || 'Failed to authenticate with access token')
+            setLoading(false)
+            setTimeout(() => navigate('/login'), 3000)
+            return
+          }
+        }
+
         if (!code) {
-          setError('No authorization code received')
+          console.error('No authorization code or access_token received')
+          console.error('Full URL:', window.location.href)
+          setError('No authorization code received. Please try again.')
           setLoading(false)
           setTimeout(() => navigate('/login'), 3000)
           return

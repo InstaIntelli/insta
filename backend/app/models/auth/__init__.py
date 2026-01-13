@@ -31,7 +31,7 @@ class User(Base):
     mfa_recovery_codes = Column(Text, nullable=True)  # JSON array of recovery codes
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     def to_dict(self):
         """Convert model to dictionary"""

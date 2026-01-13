@@ -28,14 +28,25 @@ export const googleAuthService = {
    * @param {string} redirectTo - Redirect URL used in OAuth flow
    * @returns {Promise<Object>} User data and access token
    */
-  handleCallback: async (code, redirectTo = `${window.location.origin}/auth/callback`) => {
+  handleCallback: async (code, redirectTo = `${window.location.origin}/auth/callback`, accessToken = null, user = null) => {
     try {
-      const response = await apiClient.post('/api/v1/auth/oauth/google/callback', null, {
-        params: {
-          code,
+      // If we have access_token and user (from Supabase direct redirect), send as JSON body
+      // Otherwise, send code as query param (traditional OAuth flow)
+      let response
+      if (accessToken && user) {
+        response = await apiClient.post('/api/v1/auth/oauth/google/callback', {
+          access_token: accessToken,
+          user: user,
           redirect_to: redirectTo
-        }
-      })
+        })
+      } else {
+        response = await apiClient.post('/api/v1/auth/oauth/google/callback', null, {
+          params: {
+            code,
+            redirect_to: redirectTo
+          }
+        })
+      }
       
       // Store token and user data
       if (response.data.access_token) {

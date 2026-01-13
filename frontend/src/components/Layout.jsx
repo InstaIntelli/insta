@@ -26,6 +26,14 @@ function Layout({ children }) {
     }
   }
 
+  const handleSwitchAccount = () => {
+    // Clear session and redirect to login (no confirmation needed)
+    localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('user')
+    navigate('/login')
+  }
+
   const navItems = [
     { path: '/feed', icon: '🏠', label: 'Home', activeIcon: '🏠' },
     { path: '/search', icon: '🔍', label: 'Search', activeIcon: '🔎' },
@@ -98,6 +106,10 @@ function Layout({ children }) {
                     <span>🔐</span>
                     <span>Security</span>
                   </Link>
+                  <button onClick={handleSwitchAccount} className="dropdown-item">
+                    <span>🔄</span>
+                    <span>Switch Account</span>
+                  </button>
                   <button onClick={handleLogout} className="dropdown-item">
                     <span>🚪</span>
                     <span>Logout</span>

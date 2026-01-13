@@ -64,7 +64,7 @@ app.add_middleware(
 )
 
 # API routers - integrated from team members
-from app.api.v1.endpoints import auth, users, posts, ai, search, mfa, social, recommendations, analytics, health
+from app.api.v1.endpoints import auth, users, posts, ai, search, mfa, social, recommendations, analytics, health, profile
 
 # Register routers
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
@@ -76,6 +76,7 @@ app.include_router(search.router, prefix="/api/v1", tags=["Search & RAG"])
 app.include_router(social.router, prefix="/api/v1", tags=["Social Features"])
 app.include_router(recommendations.router, prefix="/api/v1/recommendations", tags=["Recommendations"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+app.include_router(profile.router, prefix="/api/v1", tags=["Profile"])
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
 
 
