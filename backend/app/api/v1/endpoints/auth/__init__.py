@@ -429,16 +429,33 @@ async def handle_google_oauth_callback(
                 )
         elif code:
             # Exchange code for session
+            logger.info(f"Exchanging OAuth code for session, redirect_to: {redirect_to}")
             session_data = supabase_auth.verify_oauth_callback(code, redirect_to)
             
             if not session_data:
+                logger.error("Failed to exchange OAuth code for session")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid OAuth code or failed to authenticate"
+                    detail="Invalid OAuth code or failed to authenticate. Please try again."
                 )
             
-            supabase_user = session_data["user"]
-            email = supabase_user["email"]
+            supabase_user = session_data.get("user")
+            if not supabase_user:
+                logger.error("No user data in session")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Failed to retrieve user information"
+                )
+            
+            email = supabase_user.get("email")
+            if not email:
+                logger.error("No email in user data")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email not found in user data"
+                )
+            
+            logger.info(f"Successfully authenticated user: {email}")
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

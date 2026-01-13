@@ -88,6 +88,13 @@ class Settings(BaseSettings):
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str = ""
     
+    # Time-Series DB (Cassandra - Activity Logs & Analytics)
+    CASSANDRA_HOSTS: str = "localhost"
+    CASSANDRA_PORT: int = 9042
+    CASSANDRA_KEYSPACE: str = "instaintelli"
+    CASSANDRA_USERNAME: str = ""
+    CASSANDRA_PASSWORD: str = ""
+    
     # LLM Provider (openai or grok)
     LLM_PROVIDER: str = "openai"  # Options: "openai" or "grok"
     

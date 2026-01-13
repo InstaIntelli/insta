@@ -87,10 +87,16 @@ function OAuthCallback() {
 
         // Exchange code for token
         const redirectTo = `${window.location.origin}/auth/callback`
-        await googleAuthService.handleCallback(code, redirectTo)
-
-        // Redirect to feed
-        navigate('/feed')
+        console.log('🔄 Exchanging code for token...')
+        const result = await googleAuthService.handleCallback(code, redirectTo)
+        
+        if (result && result.access_token) {
+          console.log('✅ Authentication successful, redirecting to feed')
+          // Redirect to feed
+          navigate('/feed')
+        } else {
+          throw new Error('Authentication failed: No access token received')
+        }
       } catch (err) {
         console.error('OAuth callback error:', err)
         setError(err.response?.data?.detail || 'Authentication failed. Please try again.')

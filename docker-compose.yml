@@ -135,6 +135,34 @@ services:
       - instaintelli_network
     restart: unless-stopped
 
+  # Cassandra - Time-Series Data (User Activity Logs, Analytics, Notifications)
+  cassandra:
+    image: cassandra:4.1
+    container_name: instaintelli_cassandra
+    environment:
+      - CASSANDRA_CLUSTER_NAME=InstaIntelliCluster
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_RACK=rack1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - MAX_HEAP_SIZE=512M
+      - HEAP_NEWSIZE=128M
+    ports:
+      - "${CASSANDRA_PORT:-9042}:9042"  # CQL Native Protocol
+      - "7000:7000"  # Inter-node communication
+      - "7001:7001"  # SSL inter-node communication
+      - "7199:7199"  # JMX
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -E '^UN' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s  # Cassandra needs time to start
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+
   # FastAPI Backend
   backend:
     build:
@@ -156,6 +184,9 @@ services:
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-neo4j123}
+      - CASSANDRA_HOSTS=cassandra
+      - CASSANDRA_PORT=9042
+      - CASSANDRA_KEYSPACE=instaintelli
       - SUPABASE_DB_URL=${SUPABASE_DB_URL}
       - SUPABASE_PROJECT_URL=${SUPABASE_PROJECT_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
@@ -172,6 +203,8 @@ services:
       chromadb:
         condition: service_started  # Changed to service_started instead of healthy to avoid blocking
       neo4j:
+        condition: service_healthy
+      cassandra:
         condition: service_healthy
     volumes:
       - ./backend:/app/backend  # Mount backend code for hot-reload
@@ -220,6 +253,8 @@ volumes:
   neo4j_data:
     driver: local
   neo4j_logs:
+    driver: local
+  cassandra_data:
     driver: local
 
 networks:

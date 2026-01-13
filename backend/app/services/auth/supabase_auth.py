@@ -104,28 +104,36 @@ class SupabaseAuthService:
         Returns:
             Session data with access_token and user info, or None
         """
-        if not self.client:
-            return None
-        
         try:
-            # Exchange code for session using Supabase
-            # The code is exchanged via the frontend, but we can verify the token
-            # For backend verification, we'll use the service key to get user info
             import httpx
             base_url = settings.SUPABASE_PROJECT_URL.rstrip('/')
             
-            # Exchange code for session
+            # Exchange code for session using POST with form data
+            exchange_data = {
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_to": redirect_to
+            }
+            
             exchange_response = httpx.post(
-                f"{base_url}/auth/v1/token?grant_type=authorization_code&code={code}&redirect_to={redirect_to}",
+                f"{base_url}/auth/v1/token",
+                data=exchange_data,
                 headers={
                     "apikey": settings.SUPABASE_ANON_KEY,
                     "Content-Type": "application/x-www-form-urlencoded"
-                }
+                },
+                timeout=10.0
             )
+            
+            logger.info(f"Code exchange response status: {exchange_response.status_code}")
             
             if exchange_response.status_code == 200:
                 session_data = exchange_response.json()
                 access_token = session_data.get("access_token")
+                
+                if not access_token:
+                    logger.error("No access_token in session data")
+                    return None
                 
                 # Get user info
                 user_response = httpx.get(
@@ -133,11 +141,15 @@ class SupabaseAuthService:
                     headers={
                         "apikey": settings.SUPABASE_ANON_KEY,
                         "Authorization": f"Bearer {access_token}"
-                    }
+                    },
+                    timeout=10.0
                 )
+                
+                logger.info(f"User info response status: {user_response.status_code}")
                 
                 if user_response.status_code == 200:
                     user_data = user_response.json()
+                    logger.info(f"Successfully retrieved user: {user_data.get('email')}")
                     return {
                         "access_token": access_token,
                         "refresh_token": session_data.get("refresh_token"),
@@ -149,9 +161,13 @@ class SupabaseAuthService:
                             "provider": "google"
                         }
                     }
+                else:
+                    logger.error(f"Failed to get user info: {user_response.text}")
+            else:
+                logger.error(f"Code exchange failed: {exchange_response.status_code} - {exchange_response.text}")
             return None
         except Exception as e:
-            logger.error(f"Error verifying OAuth callback: {str(e)}")
+            logger.error(f"Error verifying OAuth callback: {str(e)}", exc_info=True)
             return None
     
     def is_configured(self) -> bool:

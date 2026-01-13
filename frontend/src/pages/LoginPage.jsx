@@ -59,10 +59,21 @@ function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await googleAuthService.signInWithGoogle()
-      // User will be redirected to Google OAuth page
+      console.log('🔄 Initiating Google OAuth...')
+      const oauthUrl = await googleAuthService.getOAuthUrl()
+      
+      if (!oauthUrl) {
+        throw new Error('Failed to get OAuth URL from server')
+      }
+      
+      console.log('✅ Got OAuth URL, redirecting...')
+      // Redirect to Google OAuth page
+      window.location.href = oauthUrl
+      // Note: setLoading(false) won't execute because page is redirecting
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to sign in with Google')
+      console.error('❌ Google sign-in error:', err)
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to sign in with Google'
+      setError(errorMsg)
       setLoading(false)
     }
   }
