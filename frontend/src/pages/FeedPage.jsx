@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { postService } from '../services/postService'
+import { formatApiError } from '../services/api'
 import PostCard from '../components/PostCard'
 import Stories from '../components/Stories'
 import RightSidebar from '../components/RightSidebar'
@@ -24,7 +25,7 @@ function FeedPage() {
       const data = await postService.getFeed()
       setPosts(data.posts || [])
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load feed')
+      setError(formatApiError(err))
       // Add mock posts for demo if API fails
       setPosts([
         {
@@ -70,9 +71,6 @@ function FeedPage() {
   return (
     <div className="feed-page-container">
       <div className="feed-main-content">
-        {/* Stories Section */}
-        <Stories />
-
         {/* Posts Feed */}
         {error && (
           <div className="error-banner">

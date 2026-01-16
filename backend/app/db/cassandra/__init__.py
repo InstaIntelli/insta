@@ -3,15 +3,24 @@ Cassandra Database Client
 Handles connection to Cassandra for time-series data (activity logs, analytics)
 """
 
-from cassandra.cluster import Cluster, Session
-from cassandra.auth import PlainTextAuthProvider
-from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
-from cassandra.query import SimpleStatement, ConsistencyLevel
 from typing import Optional, List, Dict, Any
 import logging
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Optional Cassandra imports
+try:
+    from cassandra.cluster import Cluster, Session
+    from cassandra.auth import PlainTextAuthProvider
+    from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
+    from cassandra.query import SimpleStatement, ConsistencyLevel
+    CASSANDRA_AVAILABLE = True
+except ImportError:
+    CASSANDRA_AVAILABLE = False
+    Cluster = None
+    Session = None
+    logger.warning("Cassandra driver not installed - Cassandra features will be disabled")
 
 class CassandraClient:
     """Cassandra client with connection pooling and retry logic"""
@@ -24,6 +33,10 @@ class CassandraClient:
     
     def connect(self) -> bool:
         """Connect to Cassandra cluster"""
+        if not CASSANDRA_AVAILABLE:
+            logger.warning("Cassandra driver not available - cannot connect")
+            return False
+            
         try:
             if self._initialized and self.session:
                 return True
@@ -145,6 +158,9 @@ class CassandraClient:
     
     def execute(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> Any:
         """Execute a CQL query"""
+        if not CASSANDRA_AVAILABLE:
+            raise Exception("Cassandra driver not available")
+            
         if not self.session:
             if not self.connect():
                 raise Exception("Cassandra not connected")
@@ -173,6 +189,8 @@ class CassandraClient:
     
     def is_connected(self) -> bool:
         """Check if connected to Cassandra"""
+        if not CASSANDRA_AVAILABLE:
+            return False
         return self._initialized and self.session is not None
 
 

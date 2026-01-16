@@ -100,8 +100,12 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
             }
         )
         
+        # Rewrite profile image URL for instant loading
+        user_dict = user.to_safe_dict()
+        user_dict['profile_image_url'] = get_proxied_image_url(user_dict.get('profile_image_url'))
+        
         return {
-            "user": user.to_safe_dict(),
+            "user": user_dict,
             "access_token": access_token,
             "token_type": "bearer"
         }
@@ -114,6 +118,30 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Registration failed"
         )
+
+
+# Helper to rewrite image URLs (same as in profile service)
+def get_proxied_image_url(original_url: Optional[str]) -> Optional[str]:
+    if not original_url:
+        return None
+    
+    # Extract path from various URL formats
+    object_path = None
+    if "/instaintelli-media/" in original_url:
+        object_path = original_url.split("/instaintelli-media/")[-1]
+    elif "minio:9000" in original_url or "localhost:9000" in original_url:
+        parts = original_url.split("/")
+        if len(parts) > 3:
+            object_path = "/".join(parts[3:])
+    elif "s3.amazonaws" in original_url:
+        # Don't proxy external S3 URLs
+        return original_url
+            
+    if object_path:
+        # Use backend proxy endpoint
+        return f"http://localhost:8000/api/v1/profile/images/{object_path}"
+    
+    return original_url
 
 
 @router.post("/login", response_model=dict)
@@ -158,9 +186,13 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
             }
         )
         
+        # Rewrite profile image URL for instant loading
+        user_dict = user.to_safe_dict()
+        user_dict['profile_image_url'] = get_proxied_image_url(user_dict.get('profile_image_url'))
+        
         return {
             "mfa_required": False,
-            "user": user.to_safe_dict(),
+            "user": user_dict,
             "access_token": access_token,
             "token_type": "bearer"
         }
@@ -242,7 +274,10 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user), 
                 detail="User not found"
             )
         
-        return UserResponse(**user.to_safe_dict())
+        response = user.to_safe_dict()
+        response['profile_image_url'] = get_proxied_image_url(response.get('profile_image_url'))
+        
+        return UserResponse(**response)
         
     except HTTPException:
         raise
@@ -309,8 +344,12 @@ async def verify_mfa_login(mfa_data: MFAVerifyLogin, db: Session = Depends(get_d
             }
         )
         
+        # Rewrite profile image URL for instant loading
+        user_dict = user.to_safe_dict()
+        user_dict['profile_image_url'] = get_proxied_image_url(user_dict.get('profile_image_url'))
+        
         return {
-            "user": user.to_safe_dict(),
+            "user": user_dict,
             "access_token": access_token,
             "token_type": "bearer"
         }
@@ -468,25 +507,24 @@ async def handle_google_oauth_callback(
         else:
             supabase_user = session_data["user"]
         
-        # Check if user exists in our database
+        # Check if user exists in our database (optimized query)
         user = get_user_by_email(db, email)
         
         if not user:
-            # Create new user from Google OAuth
-            username = email.split("@")[0]  # Use email prefix as username
-            # Ensure username is unique
-            base_username = username
-            counter = 1
-            while get_user_by_username(db, username):
-                username = f"{base_username}{counter}"
-                counter += 1
+            # Fast user creation - optimized for demo
+            username = email.split("@")[0].lower().replace('.', '_')  # Clean username
+            # Quick uniqueness check (only check once, append timestamp if needed)
+            existing = get_user_by_username(db, username)
+            if existing:
+                # Append short timestamp for uniqueness
+                username = f"{username}_{int(datetime.utcnow().timestamp()) % 10000}"
             
             user = create_user(
                 db=db,
                 email=email,
                 username=username,
                 password=None,  # No password for OAuth users
-                full_name=supabase_user.get("full_name")
+                full_name=supabase_user.get("full_name") or supabase_user.get("name")
             )
             
             logger.info(f"Created new user from Google OAuth: {email}")
@@ -500,8 +538,12 @@ async def handle_google_oauth_callback(
             }
         )
         
+        # Rewrite profile image URL for instant loading
+        user_dict = user.to_safe_dict()
+        user_dict['profile_image_url'] = get_proxied_image_url(user_dict.get('profile_image_url'))
+        
         return {
-            "user": user.to_safe_dict(),
+            "user": user_dict,
             "access_token": access_token,
             "token_type": "bearer"
         }

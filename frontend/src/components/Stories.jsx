@@ -46,12 +46,22 @@ function Stories({ stories = [] }) {
               <div className="story-avatar-wrapper">
                 <div className="story-avatar">
                   {story.avatar ? (
-                    <img src={story.avatar} alt={story.username} />
-                  ) : (
-                    <div className="story-avatar-placeholder">
-                      {story.username?.[0]?.toUpperCase() || 'U'}
-                    </div>
-                  )}
+                    <img 
+                      src={story.avatar} 
+                      alt={story.username}
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        const placeholder = e.target.nextElementSibling
+                        if (placeholder) placeholder.style.display = 'flex'
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="story-avatar-placeholder"
+                    style={{ display: story.avatar ? 'none' : 'flex' }}
+                  >
+                    {story.username?.[0]?.toUpperCase() || 'U'}
+                  </div>
                 </div>
               </div>
               <div className="story-username">{story.username}</div>

@@ -12,12 +12,25 @@ export const googleAuthService = {
    */
   getOAuthUrl: async (redirectTo = `${window.location.origin}/auth/callback`) => {
     try {
+      // Cache OAuth URL for faster subsequent calls
+      const cacheKey = `oauth_url_${redirectTo}`
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) {
+        return cached
+      }
+      
       const response = await apiClient.get('/api/v1/auth/oauth/google/url', {
-        params: { redirect_to: redirectTo }
+        params: { redirect_to: redirectTo },
+        timeout: 5000 // 5 second timeout for fast failure
       })
-      return response.data.oauth_url
+      const oauthUrl = response.data.oauth_url
+      
+      // Cache for 5 minutes
+      sessionStorage.setItem(cacheKey, oauthUrl)
+      setTimeout(() => sessionStorage.removeItem(cacheKey), 5 * 60 * 1000)
+      
+      return oauthUrl
     } catch (error) {
-      console.error('Error getting OAuth URL:', error)
       throw error
     }
   },
@@ -30,47 +43,35 @@ export const googleAuthService = {
    */
   handleCallback: async (code, redirectTo = `${window.location.origin}/auth/callback`, accessToken = null, user = null) => {
     try {
-      console.log('🔄 Handling OAuth callback:', { code: code ? 'present' : 'missing', accessToken: accessToken ? 'present' : 'missing', hasUser: !!user })
-      
-      // If we have access_token and user (from Supabase direct redirect), send as JSON body
-      // Otherwise, send code as JSON body (not query params) for better reliability
+      // Optimized: Use fastest path available
       let response
       if (accessToken && user) {
-        console.log('📤 Sending access_token and user to backend')
+        // Fastest path: Direct token + user data
         response = await apiClient.post('/api/v1/auth/oauth/google/callback', {
           access_token: accessToken,
           user: user,
           redirect_to: redirectTo
-        })
+        }, { timeout: 8000 })
       } else if (code) {
-        console.log('📤 Sending code to backend')
+        // Standard path: Exchange code
         response = await apiClient.post('/api/v1/auth/oauth/google/callback', {
           code: code,
           redirect_to: redirectTo
-        })
+        }, { timeout: 8000 })
       } else {
         throw new Error('No code or access_token provided')
       }
       
-      console.log('✅ OAuth callback successful:', response.data)
-      
-      // Store token and user data
+      // Store immediately for instant login
       if (response.data.access_token) {
         localStorage.setItem('token', response.data.access_token)
         localStorage.setItem('user', JSON.stringify(response.data.user))
-        console.log('💾 Stored token and user data')
       } else {
-        console.warn('⚠️ No access_token in response')
+        throw new Error('No access token received')
       }
       
       return response.data
     } catch (error) {
-      console.error('❌ OAuth callback error:', error)
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      })
       throw error
     }
   },
@@ -82,18 +83,15 @@ export const googleAuthService = {
   signInWithGoogle: async () => {
     try {
       const redirectTo = `${window.location.origin}/auth/callback`
-      console.log('🔄 Getting OAuth URL for:', redirectTo)
       const oauthUrl = await googleAuthService.getOAuthUrl(redirectTo)
       
       if (oauthUrl) {
-        console.log('✅ Got OAuth URL, redirecting to:', oauthUrl.substring(0, 80) + '...')
-        // Redirect to Google OAuth
+        // Immediate redirect - no delay
         window.location.href = oauthUrl
       } else {
-        throw new Error('Failed to get OAuth URL from server')
+        throw new Error('Failed to get OAuth URL')
       }
     } catch (error) {
-      console.error('❌ Error initiating Google OAuth:', error)
       throw error
     }
   }

@@ -67,5 +67,8 @@ chromadb>=0.4.0
 # Graph Database (Neo4j - Social Connections)
 neo4j>=5.14.0
 
+# Time-Series Database (Cassandra - Activity Logs & Analytics)
+cassandra-driver>=3.28.0
+
 # Local embeddings (requires ~1-2GB PyTorch download)
 # sentence-transformers>=2.2.2

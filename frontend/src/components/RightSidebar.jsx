@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getUser } from '../utils/auth'
 import { recommendationService } from '../services/recommendationService'
+import { socialService } from '../services/socialService'
 import './RightSidebar.css'
 
 function RightSidebar() {
@@ -13,6 +14,8 @@ function RightSidebar() {
   const currentUser = getUser()
   const [suggestions, setSuggestions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [followingStates, setFollowingStates] = useState({}) // Track which users are being followed
+  const [loadingFollows, setLoadingFollows] = useState({}) // Track loading state per user
 
   useEffect(() => {
     loadSuggestions()
@@ -38,14 +41,63 @@ function RightSidebar() {
     }
   }
 
-  const handleFollow = async (userId) => {
+  const handleFollow = async (userId, event) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!currentUser) {
+      navigate('/login')
+      return
+    }
+
+    if (loadingFollows[userId]) return
+    setLoadingFollows(prev => ({ ...prev, [userId]: true }))
+
     try {
-      // TODO: Implement follow functionality
-      console.log('Follow user:', userId)
+      const isFollowing = followingStates[userId]
+      // Optimistic update - update UI immediately
+      setFollowingStates(prev => ({ ...prev, [userId]: !isFollowing }))
+
+      if (isFollowing) {
+        await socialService.unfollowUser(userId)
+      } else {
+        await socialService.followUser(userId)
+      }
+
+      // Trigger profile refresh event for any open profile pages
+      window.dispatchEvent(new CustomEvent('followUpdated', {
+        detail: { userId, isFollowing: !isFollowing }
+      }))
     } catch (err) {
       console.error('Error following user:', err)
+      // Rollback optimistic update on error
+      setFollowingStates(prev => ({ ...prev, [userId]: isFollowing }))
+      alert(err.response?.data?.detail || 'Failed to follow user')
+    } finally {
+      setLoadingFollows(prev => ({ ...prev, [userId]: false }))
     }
   }
+
+  // Check follow status for suggestions
+  useEffect(() => {
+    const checkFollowStatuses = async () => {
+      if (!currentUser || suggestions.length === 0) return
+
+      const statuses = {}
+      for (const user of suggestions) {
+        try {
+          const response = await socialService.checkFollowing(user.user_id)
+          statuses[user.user_id] = response.is_following || false
+        } catch (err) {
+          console.error(`Error checking follow status for ${user.user_id}:`, err)
+          statuses[user.user_id] = false
+        }
+      }
+      setFollowingStates(statuses)
+    }
+
+    checkFollowStatuses()
+  }, [suggestions, currentUser])
 
   const handleSwitchAccount = () => {
     // Clear session and redirect to login
@@ -64,20 +116,30 @@ function RightSidebar() {
         <Link to={`/profile/${currentUser.user_id}`} className="user-profile-link">
           <div className="user-profile-avatar">
             {currentUser.profile_image_url ? (
-              <img src={currentUser.profile_image_url} alt={currentUser.username} />
-            ) : (
-              <div className="user-profile-avatar-placeholder">
-                {currentUser.username?.[0]?.toUpperCase() || 'U'}
-              </div>
-            )}
+              <img
+                src={currentUser.profile_image_url}
+                alt={currentUser.username}
+                onError={(e) => {
+                  e.target.style.display = 'none'
+                  const placeholder = e.target.nextElementSibling
+                  if (placeholder) placeholder.style.display = 'flex'
+                }}
+              />
+            ) : null}
+            <div
+              className="user-profile-avatar-placeholder"
+              style={{ display: currentUser.profile_image_url ? 'none' : 'flex' }}
+            >
+              {currentUser.username?.[0]?.toUpperCase() || 'U'}
+            </div>
           </div>
           <div className="user-profile-info">
             <div className="user-profile-username">{currentUser.username}</div>
             <div className="user-profile-name">{currentUser.full_name || 'InstaIntelli User'}</div>
           </div>
         </Link>
-        <button 
-          className="switch-btn" 
+        <button
+          className="switch-btn"
           onClick={handleSwitchAccount}
           type="button"
         >
@@ -96,33 +158,49 @@ function RightSidebar() {
           <div className="suggestions-loading">Loading...</div>
         ) : (
           <div className="suggestions-list">
-            {suggestions.map((user) => (
-              <div key={user.user_id} className="suggestion-item">
-                <Link to={`/profile/${user.user_id}`} className="suggestion-user">
-                  <div className="suggestion-avatar">
-                    {user.profile_image_url ? (
-                      <img src={user.profile_image_url} alt={user.username} />
-                    ) : (
-                      <div className="suggestion-avatar-placeholder">
+            {suggestions
+              .filter(user => !followingStates[user.user_id])
+              .map((user) => (
+                <div key={user.user_id} className="suggestion-item">
+                  <Link to={`/profile/${user.user_id}`} className="suggestion-user">
+                    <div className="suggestion-avatar">
+                      {user.profile_image_url ? (
+                        <img
+                          src={user.profile_image_url}
+                          alt={user.username}
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                            const placeholder = e.target.nextElementSibling
+                            if (placeholder) placeholder.style.display = 'flex'
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className="suggestion-avatar-placeholder"
+                        style={{ display: user.profile_image_url ? 'none' : 'flex' }}
+                      >
                         {user.username?.[0]?.toUpperCase() || 'U'}
                       </div>
-                    )}
-                  </div>
-                  <div className="suggestion-info">
-                    <div className="suggestion-username">{user.username}</div>
-                    <div className="suggestion-followed-by">
-                      Followed by {user.followed_by || 'someone'} + {user.more_followers || '3'}
                     </div>
-                  </div>
-                </Link>
-                <button 
-                  className="follow-btn"
-                  onClick={() => handleFollow(user.user_id)}
-                >
-                  Follow
-                </button>
-              </div>
-            ))}
+                    <div className="suggestion-info">
+                      <div className="suggestion-username">{user.username}</div>
+                      <div className="suggestion-followed-by">
+                        Followed by {user.followed_by || 'someone'} + {user.more_followers || '3'}
+                      </div>
+                    </div>
+                  </Link>
+                  <button
+                    className={`follow-btn ${followingStates[user.user_id] ? 'following' : ''}`}
+                    onClick={(e) => handleFollow(user.user_id, e)}
+                    disabled={loadingFollows[user.user_id]}
+                  >
+                    {loadingFollows[user.user_id] ? '...' : followingStates[user.user_id] ? 'Following' : 'Follow'}
+                  </button>
+                </div>
+              ))}
+            {suggestions.filter(user => !followingStates[user.user_id]).length === 0 && (
+              <div className="suggestions-empty">No more suggestions for now</div>
+            )}
           </div>
         )}
       </div>

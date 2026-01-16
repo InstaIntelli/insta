@@ -44,7 +44,7 @@ function RecommendationsPage() {
     try {
       await socialService.followUser(userId)
       // Update the user in the list
-      setUserRecs(prev => prev.map(user => 
+      setUserRecs(prev => prev.map(user =>
         user.user_id === userId ? { ...user, following: true } : user
       ))
     } catch (err) {
@@ -78,8 +78,8 @@ function RecommendationsPage() {
   return (
     <div className="recommendations-container">
       <div className="recommendations-header">
-        <h1>🔍 Discover</h1>
-        <p className="subtitle">Find new content and people to follow</p>
+        <h1><span>✨</span> Discover</h1>
+        <p className="subtitle">AI-powered recommendations tailored for you</p>
       </div>
 
       {/* Tabs */}
@@ -145,11 +145,9 @@ function RecommendationsPage() {
                       {user.reason && (
                         <div className="user-reason">{user.reason}</div>
                       )}
-                      {user.follower_count !== undefined && (
-                        <div className="user-stats">
-                          {user.follower_count} followers
-                        </div>
-                      )}
+                      <div className="user-stats">
+                        {user.follower_count !== undefined ? `${user.follower_count} followers` : 'Popular user'}
+                      </div>
                     </div>
                   </Link>
                   <button

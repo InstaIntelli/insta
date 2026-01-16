@@ -6,6 +6,7 @@
 import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
+import MessagesPill from './MessagesPill'
 import './Layout.css'
 
 function Layout({ children }) {
@@ -36,11 +37,13 @@ function Layout({ children }) {
 
   const navItems = [
     { path: '/feed', icon: '🏠', label: 'Home', activeIcon: '🏠' },
+    { path: '/my-posts', icon: '📸', label: 'My Posts', activeIcon: '📷' },
     { path: '/search', icon: '🔍', label: 'Search', activeIcon: '🔎' },
-    { path: '/recommendations', icon: '🔍', label: 'Discover', activeIcon: '✨' },
+    { path: '/recommendations', icon: '✨', label: 'Discover', activeIcon: '✨' },
     { path: '/upload', icon: '➕', label: 'Create', activeIcon: '✨' },
     { path: '/analytics', icon: '📊', label: 'Analytics', activeIcon: '📈' },
-    { path: '/chat', icon: '💬', label: 'Chat', activeIcon: '💬' },
+    { path: '/messages', icon: '✉️', label: 'Messages', activeIcon: '📨' },
+    { path: '/chat', icon: '🤖', label: 'Chat with AI', activeIcon: '🤖' },
     { path: `/profile/${user.user_id}`, icon: '👤', label: 'Profile', activeIcon: '👤' }
   ]
 
@@ -73,8 +76,8 @@ function Layout({ children }) {
           {/* Bottom Actions */}
           <div className="sidebar-bottom">
             {/* Theme Toggle */}
-            <button 
-              onClick={toggleTheme} 
+            <button
+              onClick={toggleTheme}
               className="sidebar-nav-item theme-toggle"
               title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
             >
@@ -84,8 +87,8 @@ function Layout({ children }) {
 
             {/* More Menu */}
             <div className="more-menu">
-              <button 
-                onClick={() => setShowMenu(!showMenu)} 
+              <button
+                onClick={() => setShowMenu(!showMenu)}
                 className="sidebar-nav-item"
               >
                 <span className="nav-item-icon">☰</span>
@@ -145,6 +148,7 @@ function Layout({ children }) {
           <span className="mobile-nav-icon">☰</span>
         </button>
       </nav>
+      <MessagesPill />
     </div>
   )
 }

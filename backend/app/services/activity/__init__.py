@@ -8,12 +8,21 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 import json
 import logging
-from cassandra.query import SimpleStatement
-from cassandra.util import uuid_from_time
-from app.db.cassandra import cassandra_client
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Optional Cassandra import - backend can work without it
+try:
+    from cassandra.query import SimpleStatement
+    from cassandra.util import uuid_from_time
+    from app.db.cassandra import cassandra_client
+    CASSANDRA_AVAILABLE = True
+except ImportError:
+    CASSANDRA_AVAILABLE = False
+    cassandra_client = None
+    logger.warning("Cassandra not available - activity logging will be disabled")
 
 
 class ActivityService:
@@ -53,7 +62,12 @@ class ActivityService:
                 return False
             
             # Generate time-based UUID for sorting
-            activity_id = uuid_from_time(datetime.utcnow())
+            if CASSANDRA_AVAILABLE:
+                from cassandra.util import uuid_from_time
+                activity_id = uuid_from_time(datetime.utcnow())
+            else:
+                import uuid
+                activity_id = uuid.uuid4()
             timestamp = datetime.utcnow()
             
             # Convert activity_data to JSON string
@@ -97,13 +111,21 @@ class ActivityService:
         timestamp: datetime
     ):
         """Log event to analytics table for aggregated queries"""
+        if not CASSANDRA_AVAILABLE or not self.client:
+            return
+            
         try:
             session = self.client.get_session()
             if not session:
                 return
             
             event_date = timestamp.date()
-            event_id = uuid_from_time(timestamp)
+            if CASSANDRA_AVAILABLE:
+                from cassandra.util import uuid_from_time
+                event_id = uuid_from_time(timestamp)
+            else:
+                import uuid
+                event_id = uuid.uuid4()
             event_data_json = json.dumps(event_data) if event_data else "{}"
             
             insert_query = """
@@ -148,6 +170,9 @@ class ActivityService:
         Returns:
             List of activity dictionaries
         """
+        if not CASSANDRA_AVAILABLE or not self.client:
+            return []
+            
         try:
             if not self.client.is_connected():
                 self.client.connect()
@@ -222,6 +247,9 @@ class ActivityService:
         Returns:
             List of analytics events
         """
+        if not CASSANDRA_AVAILABLE or not self.client:
+            return []
+            
         try:
             if not self.client.is_connected():
                 self.client.connect()

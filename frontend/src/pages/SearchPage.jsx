@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react'
 import { searchService } from '../services/searchService'
+import { formatApiError } from '../services/api'
 import PostCard from '../components/PostCard'
 import './Search.css'
 
@@ -14,9 +15,11 @@ function SearchPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [searched, setSearched] = useState(false)
+  const [searchType, setSearchType] = useState('semantic') // 'semantic' | 'keyword'
+  const [searchScope, setSearchScope] = useState('global') // 'my' | 'global'
 
   const handleSearch = async (e) => {
-    e.preventDefault()
+    if (e) e.preventDefault()
     if (!query.trim()) return
 
     setLoading(true)
@@ -25,14 +28,16 @@ function SearchPage() {
 
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const data = await searchService.semanticSearch(
+      const data = await searchService.search(
         query,
-        user.user_id || null,
-        10
+        user.user_id,
+        searchType,
+        searchScope === 'global',
+        20
       )
       setResults(data.results || [])
     } catch (err) {
-      setError(err.response?.data?.detail || 'Search failed. Please try again.')
+      setError(formatApiError(err))
       setResults([])
     } finally {
       setLoading(false)
@@ -42,14 +47,48 @@ function SearchPage() {
   return (
     <div className="search-page">
       <div className="search-hero">
-        <div className="search-hero-content">
-          <div className="search-icon-large">🔍</div>
-          <h1>Semantic Search</h1>
-          <p>Find your posts using natural language</p>
-        </div>
+        <h1>Semantic Search</h1>
+        <p>Harness the power of AI to find exactly what you're looking for using natural language.</p>
       </div>
 
       <div className="search-container">
+        {/* Modern Segmented Toggles */}
+        <div className="search-controls">
+          <div className="control-group" title="Choose search method">
+            <button
+              type="button"
+              className={`control-btn ${searchType === 'semantic' ? 'active' : ''}`}
+              onClick={() => setSearchType('semantic')}
+            >
+              <span>✨</span> Semantic
+            </button>
+            <button
+              type="button"
+              className={`control-btn ${searchType === 'keyword' ? 'active' : ''}`}
+              onClick={() => setSearchType('keyword')}
+            >
+              <span>⌨️</span> Keyword
+            </button>
+          </div>
+
+          <div className="control-group" title="Limit search scope">
+            <button
+              type="button"
+              className={`control-btn ${searchScope === 'global' ? 'active' : ''}`}
+              onClick={() => setSearchScope('global')}
+            >
+              <span>🌎</span> Global
+            </button>
+            <button
+              type="button"
+              className={`control-btn ${searchScope === 'my' ? 'active' : ''}`}
+              onClick={() => setSearchScope('my')}
+            >
+              <span>👤</span> My Posts
+            </button>
+          </div>
+        </div>
+
         <form onSubmit={handleSearch} className="search-form-modern">
           <div className="search-input-wrapper">
             <span className="search-icon">🔍</span>
@@ -57,7 +96,10 @@ function SearchPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Try: 'Show me posts about AI' or 'Find posts with dogs'..."
+              placeholder={searchType === 'semantic'
+                ? "Try: 'Show me posts about AI' or 'Find posts with dogs'..."
+                : "Enter keywords to match exactly..."
+              }
               className="search-input-modern"
               autoFocus
             />
@@ -70,7 +112,7 @@ function SearchPage() {
                   setSearched(false)
                 }}
                 className="clear-button"
-                aria-label="Clear"
+                aria-label="Clear Search"
               >
                 ✕
               </button>
@@ -95,43 +137,39 @@ function SearchPage() {
         {loading && (
           <div className="search-loading">
             <div className="loading-spinner"></div>
-            <p>Searching through your posts...</p>
+            <p>Scanning vectors and analyzing meaning...</p>
           </div>
         )}
 
         {searched && !loading && (
-          <div className="search-results-section">
+          <div className="search-results-section animate-fade-in">
             <div className="results-header">
               <h2>
                 {results.length > 0 ? (
                   <>
-                    Found <span className="results-count">{results.length}</span> {results.length === 1 ? 'post' : 'posts'}
+                    Discovered <span className="results-count">{results.length}</span> {results.length === 1 ? 'match' : 'matches'}
                   </>
                 ) : (
-                  'No results found'
+                  'No exact matches discovered'
                 )}
               </h2>
             </div>
 
             {results.length === 0 ? (
-              <div className="no-results-modern">
-                <div className="no-results-icon">🔎</div>
-                <h3>No posts found</h3>
-                <p>Try different keywords or upload more posts to search through!</p>
-                <div className="suggestions">
-                  <p className="suggestions-title">Try searching for:</p>
-                  <div className="suggestion-tags">
-                    <button onClick={() => setQuery('posts about technology')} className="suggestion-tag">technology</button>
-                    <button onClick={() => setQuery('posts with nature')} className="suggestion-tag">nature</button>
-                    <button onClick={() => setQuery('food posts')} className="suggestion-tag">food</button>
-                    <button onClick={() => setQuery('travel posts')} className="suggestion-tag">travel</button>
-                  </div>
+              <div className="no-results-modern card-glass">
+                <span className="no-results-icon">🔎</span>
+                <h3>We couldn't find what you're looking for</h3>
+                <p>Try rephrasing your search or explore these popular topics:</p>
+                <div className="suggestion-tags">
+                  <button onClick={() => { setQuery('AI and machine learning'); handleSearch(); }} className="suggestion-tag">AI & ML</button>
+                  <button onClick={() => { setQuery('beautiful nature photography'); handleSearch(); }} className="suggestion-tag">Nature</button>
+                  <button onClick={() => { setQuery('delicious food recipes'); handleSearch(); }} className="suggestion-tag">Food</button>
+                  <button onClick={() => { setQuery('exciting travel adventures'); handleSearch(); }} className="suggestion-tag">Travel</button>
                 </div>
               </div>
             ) : (
               <div className="results-feed">
                 {results.map((result, index) => {
-                  // Convert result to post format for PostCard
                   const post = {
                     post_id: result.post_id,
                     user_id: result.metadata?.user_id || 'unknown',
@@ -147,9 +185,9 @@ function SearchPage() {
                     <div key={result.post_id || index} className="result-item">
                       <PostCard post={post} />
                       {result.similarity_score && (
-                        <div className="similarity-badge">
-                          <span className="similarity-icon">✨</span>
-                          <span>{(result.similarity_score * 100).toFixed(0)}% match</span>
+                        <div className="similarity-badge" title="AI Confidence Score">
+                          <span>✨</span>
+                          <span>{(result.similarity_score * 100).toFixed(0)}% Match</span>
                         </div>
                       )}
                     </div>
@@ -162,13 +200,24 @@ function SearchPage() {
 
         {!searched && (
           <div className="search-tips">
-            <h3>💡 Search Tips</h3>
-            <ul>
-              <li>Use natural language: "Show me posts about AI"</li>
-              <li>Search by topic: "Find posts with dogs"</li>
-              <li>Ask questions: "What posts did I upload about travel?"</li>
-              <li>Our AI understands context and meaning, not just keywords!</li>
-            </ul>
+            <h3>💡 Master Your Search</h3>
+            <div className="tips-grid">
+              <div className="tip-card">
+                <div className="tip-icon">🧠</div>
+                <h4>Semantic Power</h4>
+                <p>Use natural sentences. Instead of "dog", try "Show me cute golden retriever puppies".</p>
+              </div>
+              <div className="tip-card">
+                <div className="tip-icon">❓</div>
+                <h4>Ask Questions</h4>
+                <p>Curious about your history? Try "What did I post about our summer trip?"</p>
+              </div>
+              <div className="tip-card">
+                <div className="tip-icon">🌍</div>
+                <h4>Scope Control</h4>
+                <p>Switch to Global to discover inspiration from the entire community.</p>
+              </div>
+            </div>
           </div>
         )}
       </div>

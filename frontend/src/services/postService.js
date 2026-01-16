@@ -8,9 +8,16 @@ import apiClient from './api'
 export const postService = {
   // Upload post
   uploadPost: async (formData) => {
+    // Don't set Content-Type - axios will set it automatically with boundary for FormData
     const response = await apiClient.post('/api/v1/posts/upload', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
+        // Let axios set Content-Type automatically with boundary for FormData
+      },
+      timeout: 60000, // 60 seconds for file uploads
+      onUploadProgress: (progressEvent) => {
+        // Optional: can add progress tracking here
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        console.log(`Upload progress: ${percentCompleted}%`)
       }
     })
     return response.data

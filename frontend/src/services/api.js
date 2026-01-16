@@ -10,10 +10,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10 second timeout for big data operations
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: 60000, // Increased timeout for big data operations and uploads
+  headers: {},
 })
 
 // Request interceptor - add auth token
@@ -46,6 +44,44 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+/**
+ * Format API error into a human-readable string
+ * Handles strings, FastAPI validation objects, and arrays
+ */
+export const formatApiError = (err) => {
+  if (!err) return 'An unknown error occurred';
+
+  // Specific handling for FastAPI/Pydantic validation errors
+  if (err.response?.data?.detail) {
+    const detail = err.response.data.detail;
+
+    if (typeof detail === 'string') return detail;
+
+    if (Array.isArray(detail)) {
+      return detail
+        .map(d => {
+          if (typeof d === 'string') return d;
+          // Format loc and msg for human readability if available
+          const location = d.loc ? `(${d.loc.join('.')}) ` : '';
+          return `${location}${d.msg || JSON.stringify(d)}`;
+        })
+        .join(', ');
+    }
+
+    if (typeof detail === 'object') {
+      return detail.msg || JSON.stringify(detail);
+    }
+  }
+
+  // Fallback to message or generic error
+  return (
+    err.response?.data?.message ||
+    err.response?.data?.error ||
+    err.message ||
+    'An unexpected error occurred'
+  );
+};
 
 export default apiClient
 

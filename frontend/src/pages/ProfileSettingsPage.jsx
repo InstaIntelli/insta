@@ -16,20 +16,20 @@ function ProfileSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  
+
   // Initialize from localStorage immediately for instant load
   const [username, setUsername] = useState(currentUser?.username || '')
   const [fullName, setFullName] = useState(currentUser?.full_name || '')
   const [bio, setBio] = useState(currentUser?.bio || '')
   const [profileImageUrl, setProfileImageUrl] = useState(currentUser?.profile_image_url || '')
   const [email, setEmail] = useState(currentUser?.email || '')
-  
+
   // Password fields
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPasswordSection, setShowPasswordSection] = useState(false)
-  
+
   // Picture upload
   const [uploadingPicture, setUploadingPicture] = useState(false)
   const [picturePreview, setPicturePreview] = useState(currentUser?.profile_image_url || '')
@@ -39,17 +39,17 @@ function ProfileSettingsPage() {
       navigate('/login')
       return
     }
-    
+
     // Load fresh data in background (non-blocking)
     loadProfileInBackground()
-  }, [currentUser, navigate])
+  }, []) // Only run on mount to prevent overwriting user input during typing
 
   // Load profile in background without blocking UI
   const loadProfileInBackground = async () => {
     try {
       setRefreshing(true)
       const profile = await profileService.getMyProfile()
-      
+
       // Only update if data is different (avoid unnecessary re-renders)
       if (profile.username !== username) setUsername(profile.username || '')
       if (profile.full_name !== fullName) setFullName(profile.full_name || '')
@@ -77,17 +77,17 @@ function ProfileSettingsPage() {
       e.preventDefault()
       e.stopPropagation()
     }
-    
+
     // Double-check: prevent any navigation
     if (e?.nativeEvent) {
       e.nativeEvent.preventDefault()
       e.nativeEvent.stopPropagation()
     }
-    
+
     setError('')
     setSuccess('')
     setSaving(true)
-    
+
     console.log('🔄 Starting profile update...', { username, fullName, bio })
 
     // Optimistic update - update UI immediately
@@ -97,7 +97,7 @@ function ProfileSettingsPage() {
       full_name: user?.full_name,
       bio: user?.bio
     }
-    
+
     // Update localStorage immediately for instant feedback
     if (user) {
       user.username = username.trim()
@@ -110,10 +110,10 @@ function ProfileSettingsPage() {
       // Update backend (non-blocking)
       const updated = await profileService.updateProfile({
         username: username.trim(),
-        full_name: fullName.trim() || null,
-        bio: bio.trim() || null
+        full_name: fullName.trim(),
+        bio: bio.trim()
       })
-      
+
       // Sync with server response
       if (user && updated) {
         user.username = updated.username || user.username
@@ -121,11 +121,11 @@ function ProfileSettingsPage() {
         user.bio = updated.bio || user.bio
         localStorage.setItem('user', JSON.stringify(user))
       }
-      
+
       console.log('✅ Profile updated successfully!', updated)
       setSuccess('Profile updated successfully!')
       setTimeout(() => setSuccess(''), 3000)
-      
+
       // Notify profile page to refresh (non-blocking)
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('profileUpdated'))
@@ -142,7 +142,7 @@ function ProfileSettingsPage() {
         setFullName(previousData.full_name || '')
         setBio(previousData.bio || '')
       }
-      
+
       const errorMsg = err.response?.data?.detail || err.message || 'Failed to update profile'
       setError(errorMsg)
       console.error('Profile update error:', err)
@@ -176,19 +176,19 @@ function ProfileSettingsPage() {
     setUploadingPicture(true)
     setError('')
     setSuccess('')
-    
+
     try {
       const updated = await profileService.uploadProfilePicture(file)
       setProfileImageUrl(updated.profile_image_url)
       setPicturePreview(updated.profile_image_url)
-      
+
       // Update local storage
       const user = getUser()
       if (user) {
         user.profile_image_url = updated.profile_image_url
         localStorage.setItem('user', JSON.stringify(user))
       }
-      
+
       setSuccess('Profile picture updated successfully!')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
@@ -322,7 +322,7 @@ function ProfileSettingsPage() {
         {/* Profile Information Section */}
         <form onSubmit={handleProfileUpdate} className="settings-section" noValidate>
           <h2>Profile Information</h2>
-          
+
           <div className="form-group">
             <label>Email</label>
             <input

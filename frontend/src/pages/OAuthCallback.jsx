@@ -17,39 +17,26 @@ function OAuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check both query parameters and hash fragments
-        // Supabase may use hash fragments (#) instead of query params (?)
-        const urlParams = new URLSearchParams(window.location.search)
+        // Fast parsing - check hash first (Supabase uses hash)
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const urlParams = new URLSearchParams(window.location.search)
         
-        // Try to get code from query params first, then hash
-        const code = urlParams.get('code') || hashParams.get('code') || searchParams.get('code')
-        const errorParam = urlParams.get('error') || hashParams.get('error') || searchParams.get('error')
-        
-        // Also check for access_token directly in hash (Supabase sometimes returns this)
+        const code = hashParams.get('code') || urlParams.get('code') || searchParams.get('code')
+        const errorParam = hashParams.get('error') || urlParams.get('error') || searchParams.get('error')
         const accessToken = hashParams.get('access_token')
-        
-        console.log('OAuth Callback Debug:', {
-          search: window.location.search,
-          hash: window.location.hash,
-          code,
-          error: errorParam,
-          accessToken: accessToken ? 'present' : 'not present'
-        })
 
         if (errorParam) {
-          setError(`OAuth error: ${errorParam}`)
+          setError(`Authentication error: ${errorParam}`)
           setLoading(false)
-          setTimeout(() => navigate('/login'), 3000)
+          setTimeout(() => navigate('/login'), 2000)
           return
         }
 
-        // If we have an access_token directly, we can use it (Supabase redirect)
+        const redirectTo = `${window.location.origin}/auth/callback`
+
+        // Fastest path: Direct access token
         if (accessToken && !code) {
-          // Supabase redirected with token directly - we need to get user info
           try {
-            const redirectTo = `${window.location.origin}/auth/callback`
-            // Use the access_token to get user info from Supabase
             const supabaseUrl = 'https://mrnlqzxvlpjjrjnxngpk.supabase.co'
             const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
               headers: {
@@ -60,51 +47,38 @@ function OAuthCallback() {
             
             if (response.ok) {
               const userData = await response.json()
-              // Use the service to handle callback
               await googleAuthService.handleCallback(null, redirectTo, accessToken, userData)
-              navigate('/feed')
+              // Immediate redirect - no delay
+              navigate('/feed', { replace: true })
               return
-            } else {
-              throw new Error('Failed to get user info from Supabase')
             }
           } catch (err) {
-            console.error('Error handling access_token:', err)
-            setError(err.message || 'Failed to authenticate with access token')
+            setError('Authentication failed')
             setLoading(false)
-            setTimeout(() => navigate('/login'), 3000)
+            setTimeout(() => navigate('/login'), 2000)
             return
           }
         }
 
         if (!code) {
-          console.error('No authorization code or access_token received')
-          console.error('Full URL:', window.location.href)
-          setError('No authorization code received. Please try again.')
+          setError('No authorization code received')
           setLoading(false)
-          setTimeout(() => navigate('/login'), 3000)
+          setTimeout(() => navigate('/login'), 2000)
           return
         }
 
-        // Exchange code for token
-        const redirectTo = `${window.location.origin}/auth/callback`
-        console.log('🔄 Exchanging code for token...')
-        const result = await googleAuthService.handleCallback(code, redirectTo)
-        
-        if (result && result.access_token) {
-          console.log('✅ Authentication successful, redirecting to feed')
-          // Redirect to feed
-          navigate('/feed')
-        } else {
-          throw new Error('Authentication failed: No access token received')
-        }
+        // Exchange code - optimized
+        await googleAuthService.handleCallback(code, redirectTo)
+        // Immediate redirect
+        navigate('/feed', { replace: true })
       } catch (err) {
-        console.error('OAuth callback error:', err)
-        setError(err.response?.data?.detail || 'Authentication failed. Please try again.')
+        setError(err.response?.data?.detail || err.message || 'Authentication failed')
         setLoading(false)
-        setTimeout(() => navigate('/login'), 3000)
+        setTimeout(() => navigate('/login'), 2000)
       }
     }
 
+    // Execute immediately
     handleCallback()
   }, [searchParams, navigate])
 
@@ -115,11 +89,11 @@ function OAuthCallback() {
           <div className="auth-card modern-card">
             <div className="auth-header">
               <h1 className="brand-logo">InstaIntelli</h1>
-              <p className="auth-subtitle">Completing authentication...</p>
+              <p className="auth-subtitle">Signing you in...</p>
             </div>
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <div className="spinner" style={{ margin: '0 auto' }}></div>
-              <p style={{ marginTop: '20px', color: '#666' }}>Please wait while we sign you in...</p>
+              <div className="spinner" style={{ margin: '0 auto', width: '50px', height: '50px', borderWidth: '4px' }}></div>
+              <p style={{ marginTop: '24px', color: '#666', fontSize: '16px', fontWeight: '500' }}>Almost there!</p>
             </div>
           </div>
         </div>

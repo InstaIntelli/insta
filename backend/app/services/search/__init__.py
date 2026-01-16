@@ -6,6 +6,7 @@ Implemented by Alisha (Semantic Search & RAG)
 from typing import List, Dict, Optional, Any
 from app.services.ai.vector_store import vector_store
 from app.services.ai.embedding_generator import embedding_generator  # Use shared instance
+from app.services.posts.mongodb_client import posts_mongodb_client
 from app.db.redis import cache_get, cache_set, cache_key_search, cache_key_chat
 from app.core.config import settings
 from openai import OpenAI
@@ -84,7 +85,7 @@ def semantic_search(
             results.append({
                 "post_id": post.get("post_id"),
                 "metadata": post.get("metadata", {}),
-                "similarity_score": 1 - post.get("distance", 1.0) if post.get("distance") else None
+                "similarity_score": 1 / (1 + post.get("distance", 0)) if "distance" in post else None
             })
         
         response = {
@@ -107,6 +108,81 @@ def semantic_search(
             "count": 0,
             "error": str(e)
         }
+
+def keyword_search(
+    query: str,
+    user_id: Optional[str] = None,
+    n_results: int = 10
+) -> Dict[str, Any]:
+    """
+    Perform keyword search using MongoDB text indexing.
+    
+    Args:
+        query: Search query text
+        user_id: Optional user ID to filter results
+        n_results: Number of results to return
+        
+    Returns:
+        Dictionary with search results
+    """
+    try:
+        logger.info(f"Performing keyword search for: {query}")
+        
+        # Build MongoDB query
+        mongo_query = {"$text": {"$search": query}}
+        if user_id:
+            mongo_query["user_id"] = user_id
+            
+        # Execute search with score
+        cursor = posts_mongodb_client.collection.find(
+            mongo_query,
+            {"score": {"$meta": "textScore"}}
+        ).sort([("score", {"$meta": "textScore"})]).limit(n_results)
+        
+        results = []
+        for post in cursor:
+            # Format to match semantic search response structure
+            results.append({
+                "post_id": post.get("post_id"),
+                "metadata": {
+                    "user_id": post.get("user_id"),
+                    "caption": post.get("caption") or post.get("text"),
+                    "text": post.get("text"),
+                    "image_url": post.get("image_url"),
+                    "created_at": post.get("created_at")
+                },
+                "score": post.get("score")
+            })
+            
+        return {
+            "query": query,
+            "results": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        logger.error(f"Error in keyword search: {str(e)}")
+        return {
+            "query": query,
+            "results": [],
+            "count": 0,
+            "error": str(e)
+        }
+
+def search_posts(
+    query: str,
+    user_id: Optional[str] = None,
+    search_type: str = "semantic",
+    n_results: int = 10,
+    use_cache: bool = True
+) -> Dict[str, Any]:
+    """
+    Unified search entry point.
+    """
+    if search_type == "keyword":
+        return keyword_search(query, user_id, n_results)
+    else:
+        return semantic_search(query, user_id, n_results, use_cache)
+
 
 
 def rag_chat(
@@ -224,7 +300,7 @@ Please provide a helpful answer based on these posts. If the question can't be a
             referenced_posts.append({
                 "post_id": post.get("post_id"),
                 "metadata": post.get("metadata", {}),
-                "relevance_score": 1 - post.get("distance", 1.0) if post.get("distance") else None
+                "relevance_score": 1 / (1 + post.get("distance", 0)) if "distance" in post else None
             })
         
         result = {
@@ -298,7 +374,7 @@ def get_similar_posts(
             results.append({
                 "post_id": post.get("post_id"),
                 "metadata": post.get("metadata", {}),
-                "similarity_score": 1 - post.get("distance", 1.0) if post.get("distance") else None
+                "similarity_score": 1 / (1 + post.get("distance", 0)) if "distance" in post else None
             })
         
         return {

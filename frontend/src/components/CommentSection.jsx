@@ -14,6 +14,8 @@ function CommentSection({ postId, onCommentAdded, onCommentDeleted }) {
   const [loading, setLoading] = useState(true)
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [replyToId, setReplyToId] = useState(null)
+  const [replyingToUsername, setReplyingToUsername] = useState('')
   const currentUser = getUser()
 
   useEffect(() => {
@@ -38,8 +40,10 @@ function CommentSection({ postId, onCommentAdded, onCommentDeleted }) {
 
     setIsSubmitting(true)
     try {
-      await socialService.addComment(postId, newComment.trim())
+      await socialService.addComment(postId, newComment.trim(), replyToId)
       setNewComment('')
+      setReplyToId(null)
+      setReplyingToUsername('')
       await loadComments() // Reload comments
       if (onCommentAdded) onCommentAdded()
     } catch (err) {
@@ -61,6 +65,19 @@ function CommentSection({ postId, onCommentAdded, onCommentDeleted }) {
       console.error('Error deleting comment:', err)
       alert(err.response?.data?.detail || 'Failed to delete comment')
     }
+  }
+
+  const handleReplyClick = (commentId, username) => {
+    setReplyToId(commentId)
+    setReplyingToUsername(username)
+    // Scroll to input if needed, or focus
+    const input = document.querySelector('.comment-input')
+    if (input) input.focus()
+  }
+
+  const cancelReply = () => {
+    setReplyToId(null)
+    setReplyingToUsername('')
   }
 
   const formatDate = (dateString) => {
@@ -96,15 +113,23 @@ function CommentSection({ postId, onCommentAdded, onCommentDeleted }) {
                     <span className="comment-time">{formatDate(comment.created_at)}</span>
                   </div>
                   <div className="comment-text">{comment.text}</div>
-                  {currentUser && currentUser.user_id === comment.user_id && (
+                  <div className="comment-actions">
                     <button
-                      className="delete-comment-btn"
-                      onClick={() => handleDelete(comment.comment_id)}
-                      aria-label="Delete comment"
+                      className="comment-action-btn reply-btn"
+                      onClick={() => handleReplyClick(comment.comment_id, comment.username || comment.user_id)}
                     >
-                      Delete
+                      Reply
                     </button>
-                  )}
+                    {currentUser && currentUser.user_id === comment.user_id && (
+                      <button
+                        className="comment-action-btn delete-comment-btn"
+                        onClick={() => handleDelete(comment.comment_id)}
+                        aria-label="Delete comment"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                   {/* Replies */}
                   {comment.replies && comment.replies.length > 0 && (
                     <div className="comment-replies">
@@ -115,15 +140,23 @@ function CommentSection({ postId, onCommentAdded, onCommentDeleted }) {
                             <span className="comment-time">{formatDate(reply.created_at)}</span>
                           </div>
                           <div className="comment-text">{reply.text}</div>
-                          {currentUser && currentUser.user_id === reply.user_id && (
+                          <div className="comment-actions">
                             <button
-                              className="delete-comment-btn"
-                              onClick={() => handleDelete(reply.comment_id)}
-                              aria-label="Delete reply"
+                              className="comment-action-btn reply-btn"
+                              onClick={() => handleReplyClick(comment.comment_id, reply.username || reply.user_id)}
                             >
-                              Delete
+                              Reply
                             </button>
-                          )}
+                            {currentUser && currentUser.user_id === reply.user_id && (
+                              <button
+                                className="comment-action-btn delete-comment-btn"
+                                onClick={() => handleDelete(reply.comment_id)}
+                                aria-label="Delete reply"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -135,24 +168,32 @@ function CommentSection({ postId, onCommentAdded, onCommentDeleted }) {
 
           {/* Add Comment Form */}
           {currentUser ? (
-            <form className="comment-form" onSubmit={handleSubmit}>
-              <input
-                type="text"
-                className="comment-input"
-                placeholder="Add a comment..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                disabled={isSubmitting}
-                maxLength={500}
-              />
-              <button
-                type="submit"
-                className="comment-submit-btn"
-                disabled={!newComment.trim() || isSubmitting}
-              >
-                {isSubmitting ? 'Posting...' : 'Post'}
-              </button>
-            </form>
+            <div className="comment-form-container">
+              {replyToId && (
+                <div className="reply-indicator">
+                  <span>Replying to <strong>@{replyingToUsername}</strong></span>
+                  <button className="cancel-reply-btn" onClick={cancelReply}>Cancel</button>
+                </div>
+              )}
+              <form className="comment-form" onSubmit={handleSubmit}>
+                <input
+                  type="text"
+                  className="comment-input"
+                  placeholder={replyToId ? `Reply to @${replyingToUsername}...` : "Add a comment..."}
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  disabled={isSubmitting}
+                  maxLength={500}
+                />
+                <button
+                  type="submit"
+                  className="comment-submit-btn"
+                  disabled={!newComment.trim() || isSubmitting}
+                >
+                  {isSubmitting ? 'Posting...' : 'Post'}
+                </button>
+              </form>
+            </div>
           ) : (
             <div className="comment-login-prompt">
               <Link to="/login">Log in</Link> to comment

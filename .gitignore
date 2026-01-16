@@ -248,3 +248,7 @@ faiss_indexes/
 
 # MinIO data
 minio_data/
+
+# Backup files
+*.backup
+project_structure.txt

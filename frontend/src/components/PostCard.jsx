@@ -29,8 +29,8 @@ function PostCard({ post }) {
 
   const checkLikeStatus = async () => {
     try {
-      const response = await socialService.checkLikeStatus?.(post.post_id) || 
-                       { liked: post.liked || false }
+      const response = await socialService.checkLikeStatus?.(post.post_id) ||
+        { liked: post.liked || false }
       setLiked(response.liked || false)
     } catch (err) {
       console.error('Error checking like status:', err)
@@ -80,19 +80,45 @@ function PostCard({ post }) {
     setCommentCount(prev => Math.max(0, prev - 1))
   }
 
+  // Double-tap timer
+  let lastTap = 0
+  const handleDoubleTap = (e) => {
+    const now = Date.now()
+    if (now - lastTap < 300) {
+      if (!liked) handleLike()
+      // Show heart animation on image
+      const heart = document.createElement('div')
+      heart.className = 'center-heart-anim'
+      heart.innerHTML = '❤️'
+      e.currentTarget.appendChild(heart)
+      setTimeout(() => heart.remove(), 1000)
+    }
+    lastTap = now
+  }
+
   return (
     <article className="post-card fade-in">
       {/* Post Header */}
       <div className="post-header">
-        <Link to={`/profile/${post.user_id}`} className="post-user">
+        <Link to={`/profile/${post.user_id}`} className="post-user" aria-label={`View profile of ${post.username || post.user_id}`}>
           <div className="user-avatar">
             {post.user_avatar ? (
-              <img src={post.user_avatar} alt={post.username} />
-            ) : (
-              <div className="avatar-placeholder">
-                {post.username?.[0]?.toUpperCase() || 'U'}
-              </div>
-            )}
+              <img
+                src={post.user_avatar}
+                alt={post.username}
+                onError={(e) => {
+                  e.target.style.display = 'none'
+                  const placeholder = e.target.nextElementSibling
+                  if (placeholder) placeholder.style.display = 'flex'
+                }}
+              />
+            ) : null}
+            <div
+              className="avatar-placeholder"
+              style={{ display: post.user_avatar ? 'none' : 'flex' }}
+            >
+              {post.username?.[0]?.toUpperCase() || 'U'}
+            </div>
           </div>
           <span className="username">@{post.username || post.user_id}</span>
         </Link>
@@ -103,7 +129,11 @@ function PostCard({ post }) {
 
       {/* Post Image */}
       {post.image_url && (
-        <div className="post-image-container">
+        <div
+          className="post-image-container"
+          onClick={handleDoubleTap}
+          style={{ cursor: 'pointer' }}
+        >
           {!imageLoaded && !imageError && (
             <div className="image-skeleton">
               <div className="skeleton-shimmer"></div>
@@ -131,16 +161,16 @@ function PostCard({ post }) {
 
       {/* Post Actions */}
       <div className="post-actions">
-        <button 
-          className={`action-btn like-btn ${liked ? 'liked' : ''}`} 
+        <button
+          className={`action-btn like-btn ${liked ? 'liked' : ''}`}
           aria-label="Like"
           onClick={handleLike}
           disabled={isLiking}
         >
           <span>{liked ? '❤️' : '🤍'}</span>
         </button>
-        <button 
-          className="action-btn comment-btn" 
+        <button
+          className="action-btn comment-btn"
           aria-label="Comment"
           onClick={handleCommentClick}
         >
@@ -161,7 +191,7 @@ function PostCard({ post }) {
             <strong>{likeCount}</strong> {likeCount === 1 ? 'like' : 'likes'}
           </div>
         )}
-        
+
         {post.caption && (
           <div className="post-caption">
             <Link to={`/profile/${post.user_id}`} className="caption-username">
@@ -177,7 +207,7 @@ function PostCard({ post }) {
           </div>
         )}
 
-        {post.topics && post.topics.length > 0 && (
+        {Array.isArray(post.topics) && post.topics.length > 0 && (
           <div className="post-topics">
             {post.topics.map((topic, index) => (
               <span key={index} className="topic-tag">
@@ -189,16 +219,22 @@ function PostCard({ post }) {
 
         {post.created_at && (
           <div className="post-time">
-            {new Date(post.created_at).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric'
-            })}
+            {(() => {
+              try {
+                return new Date(post.created_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric'
+                });
+              } catch (e) {
+                return '';
+              }
+            })()}
           </div>
         )}
 
         {/* View Comments Link */}
         {commentCount > 0 && !showComments && (
-          <button 
+          <button
             className="view-comments-btn"
             onClick={handleCommentClick}
           >
@@ -209,7 +245,7 @@ function PostCard({ post }) {
 
       {/* Comment Section */}
       {showComments && (
-        <CommentSection 
+        <CommentSection
           postId={post.post_id}
           onCommentAdded={handleCommentAdded}
           onCommentDeleted={handleCommentDeleted}

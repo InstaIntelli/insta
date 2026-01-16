@@ -196,16 +196,26 @@ async def get_feed(
         user_ids = [post.get("user_id") for post in posts if post.get("user_id")]
         users_dict = get_users_by_user_ids(db, user_ids) if user_ids else {}
         
+        # Filter out current user's posts (feed should show only others' posts)
+        current_user_id = current_user.get("user_id") if current_user else None
+        
         # Enrich posts with username and optimize image URLs
         enriched_posts = []
         for post in posts:
             user_id = post.get("user_id")
+            
+            # Skip current user's posts in feed
+            if current_user_id and user_id == current_user_id:
+                continue
+            
             if user_id and user_id in users_dict:
                 user = users_dict[user_id]
                 post["username"] = user.username
+                post["user_avatar"] = getattr(user, 'profile_image_url', None) or getattr(user, 'profile_picture', None)
                 post["caption"] = post.get("text")  # Map text to caption for frontend
             else:
                 post["username"] = None
+                post["user_avatar"] = None
             
             # Convert image URLs to use backend proxy endpoint (reliable and fast)
             # Extract object path from any URL format and use optimized proxy
@@ -315,23 +325,104 @@ async def get_post(post_id: str) -> PostResponse:
     summary="Get user posts",
     description="Retrieve all posts for a specific user"
 )
-async def get_user_posts(user_id: str, limit: int = 50) -> PostsListResponse:
+async def get_user_posts(
+    user_id: str, 
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: Optional[dict] = Depends(get_current_user_optional)
+) -> PostsListResponse:
     """
     Get all posts for a user.
     
     Args:
         user_id: Unique identifier for the user
         limit: Maximum number of posts to return (default: 50)
+        db: Database session for user lookups
+        current_user: Current authenticated user (optional)
         
     Returns:
-        PostsListResponse with list of posts
+        PostsListResponse with list of posts (enriched with user data and social features)
     """
     try:
+        from app.services.auth import get_users_by_user_ids
+        
+        # Fetch posts from MongoDB
         posts = posts_mongodb_client.get_user_posts(user_id, limit=limit)
         
+        if not posts:
+            return PostsListResponse(posts=[], count=0)
+        
+        # Get user information for enrichment
+        users_dict = get_users_by_user_ids(db, [user_id]) if user_id else {}
+        user = users_dict.get(user_id) if users_dict else None
+        
+        # Enrich posts with username, avatar, image URLs, and social features
+        enriched_posts = []
+        for post in posts:
+            # Add username and user avatar
+            if user:
+                post["username"] = user.username
+                post["user_avatar"] = getattr(user, 'profile_image_url', None) or getattr(user, 'profile_picture', None)
+            else:
+                post["username"] = None
+                post["user_avatar"] = None
+            
+            # Map text to caption for frontend
+            post["caption"] = post.get("text")
+            
+            # Convert image URLs to use backend proxy endpoint
+            if post.get("image_url"):
+                image_url = post["image_url"]
+                object_path = None
+                
+                # Extract object path from various URL formats
+                if "/instaintelli-media/" in image_url:
+                    object_path = image_url.split("/instaintelli-media/")[-1]
+                elif "minio:9000" in image_url or "localhost:9000" in image_url:
+                    parts = image_url.split("/")
+                    if len(parts) > 3:
+                        object_path = "/".join(parts[3:])
+                elif "localhost:8000/api/v1/posts/images/" in image_url:
+                    # Already using proxy endpoint, extract path
+                    object_path = image_url.split("localhost:8000/api/v1/posts/images/")[-1]
+                
+                if object_path:
+                    post["image_url"] = f"http://localhost:8000/api/v1/posts/images/{object_path}"
+            
+            if post.get("thumbnail_url"):
+                thumb_url = post["thumbnail_url"]
+                object_path = None
+                
+                if "/instaintelli-media/" in thumb_url:
+                    object_path = thumb_url.split("/instaintelli-media/")[-1]
+                elif "minio:9000" in thumb_url or "localhost:9000" in thumb_url:
+                    parts = thumb_url.split("/")
+                    if len(parts) > 3:
+                        object_path = "/".join(parts[3:])
+                elif "localhost:8000/api/v1/posts/images/" in thumb_url:
+                    object_path = thumb_url.split("localhost:8000/api/v1/posts/images/")[-1]
+                
+                if object_path:
+                    post["thumbnail_url"] = f"http://localhost:8000/api/v1/posts/images/{object_path}"
+            
+            # Add social features data
+            post_id = post.get("post_id")
+            if post_id:
+                # Get like count
+                post["like_count"] = get_like_count(post_id)
+                # Get comment count
+                post["comment_count"] = get_comment_count(post_id)
+                # Check if current user liked this post
+                if current_user:
+                    post["liked"] = is_liked(current_user["user_id"], post_id)
+                else:
+                    post["liked"] = False
+            
+            enriched_posts.append(post)
+        
         return PostsListResponse(
-            posts=posts,
-            count=len(posts)
+            posts=enriched_posts,
+            count=len(enriched_posts)
         )
         
     except Exception as e:

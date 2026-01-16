@@ -42,13 +42,19 @@ async def startup_event():
         from app.db.neo4j import init_neo4j
         init_neo4j()
         
-        # Initialize Cassandra
-        from app.db.cassandra import cassandra_client
-        cassandra_connected = cassandra_client.connect()
-        if cassandra_connected:
-            logger.info("✅ Cassandra initialized")
-        else:
-            logger.warning("⚠️ Cassandra connection failed (will retry on first use)")
+        # Initialize Cassandra (optional)
+        try:
+            from app.db.cassandra import cassandra_client
+            if cassandra_client and hasattr(cassandra_client, 'connect'):
+                cassandra_connected = cassandra_client.connect()
+                if cassandra_connected:
+                    logger.info("✅ Cassandra initialized")
+                else:
+                    logger.warning("⚠️ Cassandra connection failed (will retry on first use)")
+            else:
+                logger.info("ℹ️ Cassandra not available (driver not installed)")
+        except Exception as e:
+            logger.warning(f"⚠️ Cassandra initialization skipped: {str(e)}")
         
         # Log database status
         logger.info("📊 Database Status:")

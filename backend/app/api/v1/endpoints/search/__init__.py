@@ -6,12 +6,35 @@ Implemented by Alisha (Semantic Search & RAG)
 from fastapi import APIRouter, HTTPException, status, Query
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-from app.services.search import semantic_search, rag_chat, get_similar_posts
+from app.services.search import search_posts, rag_chat, get_similar_posts
 import logging
 
 logger = logging.getLogger("search_endpoints")
 
 router = APIRouter(prefix="/search", tags=["Search & RAG"])
+
+# Helper to rewrite image URLs
+def get_proxied_image_url(original_url: Optional[str]) -> Optional[str]:
+    if not original_url:
+        return None
+    
+    # Extract path from various URL formats
+    object_path = None
+    if "/instaintelli-media/" in original_url:
+        object_path = original_url.split("/instaintelli-media/")[-1]
+    elif "minio:9000" in original_url or "localhost:9000" in original_url:
+        parts = original_url.split("/")
+        if len(parts) > 3:
+            object_path = "/".join(parts[3:])
+    elif "s3.amazonaws" in original_url:
+        # Don't proxy external S3 URLs
+        return original_url
+            
+    if object_path:
+        # Use backend proxy endpoint
+        return f"http://localhost:8000/api/v1/profile/images/{object_path}"
+    
+    return original_url
 
 
 # Request/Response Models
@@ -19,6 +42,7 @@ class SemanticSearchRequest(BaseModel):
     """Request model for semantic search"""
     query: str = Field(..., description="Search query text")
     user_id: Optional[str] = Field(None, description="Optional user ID to filter results")
+    search_type: str = Field("semantic", description="Search type: 'semantic' or 'keyword'")
     n_results: int = Field(10, ge=1, le=50, description="Number of results to return")
     use_cache: bool = Field(True, description="Whether to use Redis cache")
     
@@ -110,14 +134,21 @@ async def search_semantic(request: SemanticSearchRequest) -> SemanticSearchRespo
                 detail="Query cannot be empty"
             )
         
-        logger.info(f"Semantic search request: {request.query}")
+        logger.info(f"Search request ({request.search_type}): {request.query}")
         
-        result = semantic_search(
+        result = search_posts(
             query=request.query,
             user_id=request.user_id,
+            search_type=request.search_type,
             n_results=request.n_results,
             use_cache=request.use_cache
         )
+        
+        # Rewrite image URLs
+        if "results" in result:
+            for r in result["results"]:
+                if "metadata" in r and "image_url" in r["metadata"]:
+                    r["metadata"]["image_url"] = get_proxied_image_url(r["metadata"]["image_url"])
         
         return SemanticSearchResponse(**result)
         
@@ -178,6 +209,12 @@ async def chat_with_posts(request: RAGChatRequest) -> RAGChatResponse:
             use_cache=request.use_cache
         )
         
+        # Rewrite image URLs
+        if "referenced_posts" in result:
+            for r in result["referenced_posts"]:
+                if "metadata" in r and "image_url" in r["metadata"]:
+                    r["metadata"]["image_url"] = get_proxied_image_url(r["metadata"]["image_url"])
+        
         return RAGChatResponse(**result)
         
     except HTTPException:
@@ -229,6 +266,12 @@ async def get_similar(
             n_results=n_results,
             user_id=user_id
         )
+        
+        # Rewrite image URLs
+        if "similar_posts" in result:
+            for r in result["similar_posts"]:
+                if "metadata" in r and "image_url" in r["metadata"]:
+                    r["metadata"]["image_url"] = get_proxied_image_url(r["metadata"]["image_url"])
         
         return SimilarPostsResponse(**result)
         

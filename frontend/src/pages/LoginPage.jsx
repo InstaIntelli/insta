@@ -6,6 +6,7 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { googleAuthService } from '../services/googleAuthService'
+import { formatApiError } from '../services/api'
 import MFAVerification from '../components/MFAVerification'
 import './Auth.css'
 
@@ -26,7 +27,7 @@ function LoginPage() {
 
     try {
       const response = await authService.login({ email, password })
-      
+
       // Check if MFA is required
       if (response.mfa_required) {
         setMfaRequired(true)
@@ -34,7 +35,7 @@ function LoginPage() {
         setLoading(false)
         return
       }
-      
+
       // No MFA - proceed with login
       if (response.access_token) {
         localStorage.setItem('token', response.access_token)
@@ -43,7 +44,7 @@ function LoginPage() {
 
       navigate('/feed')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid email or password')
+      setError(formatApiError(err))
     } finally {
       setLoading(false)
     }
@@ -59,21 +60,15 @@ function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      console.log('🔄 Initiating Google OAuth...')
+      // Fast redirect - no delays
       const oauthUrl = await googleAuthService.getOAuthUrl()
-      
-      if (!oauthUrl) {
-        throw new Error('Failed to get OAuth URL from server')
+      if (oauthUrl) {
+        window.location.href = oauthUrl
+      } else {
+        throw new Error('Failed to get OAuth URL')
       }
-      
-      console.log('✅ Got OAuth URL, redirecting...')
-      // Redirect to Google OAuth page
-      window.location.href = oauthUrl
-      // Note: setLoading(false) won't execute because page is redirecting
     } catch (err) {
-      console.error('❌ Google sign-in error:', err)
-      const errorMsg = err.response?.data?.detail || err.message || 'Failed to sign in with Google'
-      setError(errorMsg)
+      setError(formatApiError(err))
       setLoading(false)
     }
   }
@@ -137,9 +132,9 @@ function LoginPage() {
               </div>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={loading} 
+            <button
+              type="submit"
+              disabled={loading}
               className="btn-primary modern-btn"
             >
               {loading ? (
@@ -164,7 +159,7 @@ function LoginPage() {
             className="btn-google modern-btn"
           >
             <span className="google-icon">🔍</span>
-            Continue with Google
+            {loading ? 'Connecting...' : 'Continue with Google'}
           </button>
 
           <div className="auth-footer">

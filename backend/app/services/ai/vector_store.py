@@ -5,7 +5,8 @@ Vector store operations for managing embeddings in ChromaDB.
 from typing import Optional, List
 from datetime import datetime
 
-from .chroma_client import chroma_client
+from .chroma_client import chroma_client, CHROMADB_AVAILABLE
+from .faiss_client import faiss_client
 from .schemas import PostMetadata
 from .utils import logger
 
@@ -33,14 +34,26 @@ class VectorStore:
         try:
             metadata_dict = metadata.to_dict()
             
-            success = chroma_client.add_embedding(
+            # Try ChromaDB first
+            success = False
+            if CHROMADB_AVAILABLE:
+                success = chroma_client.add_embedding(
+                    post_id=post_id,
+                    embedding=embedding,
+                    metadata=metadata_dict
+                )
+            
+            # Use FAISS as primary/fallback anyway to ensure persistence
+            faiss_success = faiss_client.add_embedding(
                 post_id=post_id,
                 embedding=embedding,
                 metadata=metadata_dict
             )
             
+            success = success or faiss_success
+            
             if success:
-                logger.info(f"Stored embedding for post {post_id} in vector database")
+                logger.info(f"Stored embedding for post {post_id} in vector database(s)")
             
             return success
             
@@ -86,11 +99,25 @@ class VectorStore:
             if user_id:
                 filter_metadata = {"user_id": user_id}
             
-            return chroma_client.search_similar(
-                query_embedding=query_embedding,
-                n_results=n_results,
-                filter_metadata=filter_metadata
-            )
+            # Try ChromaDB first if available
+            results = []
+            if CHROMADB_AVAILABLE:
+                results = chroma_client.search_similar(
+                    query_embedding=query_embedding,
+                    n_results=n_results,
+                    filter_metadata=filter_metadata
+                )
+            
+            # Fallback to FAISS if ChromaDB returned nothing or is unavailable
+            if not results:
+                logger.debug("Falling back to FAISS for similarity search")
+                results = faiss_client.search_similar(
+                    query_embedding=query_embedding,
+                    n_results=n_results,
+                    filter_metadata=filter_metadata
+                )
+            
+            return results
         except Exception as e:
             logger.error(f"Error searching similar posts: {str(e)}")
             return []

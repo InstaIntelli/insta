@@ -6,6 +6,7 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { googleAuthService } from '../services/googleAuthService'
+import { formatApiError } from '../services/api'
 import './Auth.css'
 
 function RegisterPage() {
@@ -60,7 +61,7 @@ function RegisterPage() {
 
       navigate('/feed')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.')
+      setError(formatApiError(err))
     } finally {
       setLoading(false)
     }
@@ -73,7 +74,7 @@ function RegisterPage() {
       await googleAuthService.signInWithGoogle()
       // User will be redirected to Google OAuth page
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to sign in with Google')
+      setError(formatApiError(err))
       setLoading(false)
     }
   }
@@ -170,9 +171,9 @@ function RegisterPage() {
               </div>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={loading} 
+            <button
+              type="submit"
+              disabled={loading}
               className="btn-primary modern-btn"
             >
               {loading ? (

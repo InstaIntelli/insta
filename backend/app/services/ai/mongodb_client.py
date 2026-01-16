@@ -46,7 +46,7 @@ class MongoDBClient:
             MongoDBPost if found, None otherwise
         """
         try:
-            if not self.collection:
+            if self.collection is None:
                 raise RuntimeError("MongoDB collection not initialized")
             
             # Try to find by post_id field first, then by _id
@@ -79,7 +79,7 @@ class MongoDBClient:
             True if update successful, False otherwise
         """
         try:
-            if not self.collection:
+            if self.collection is None:
                 raise RuntimeError("MongoDB collection not initialized")
             
             result = self.collection.update_one(

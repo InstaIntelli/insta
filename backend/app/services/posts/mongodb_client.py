@@ -57,6 +57,9 @@ class PostsMongoDBClient:
             # Create compound index for common queries
             self.collection.create_index([("user_id", 1), ("created_at", -1)])
             
+            # Create text index for keyword search
+            self.collection.create_index([("text", "text"), ("caption", "text")], name="text_search_index")
+            
             logger.info("MongoDB indexes created successfully")
         except PyMongoError as e:
             logger.error(f"Error creating indexes: {str(e)}")
