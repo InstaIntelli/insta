@@ -1,0 +1,134 @@
+/* Messages Pill Floating Styles */
+.messages-pill-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    cursor: pointer;
+    animation: pillSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes pillSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(50px) scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.messages-pill {
+    background: white;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px 8px 16px;
+    border-radius: 100px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='dark'] .messages-pill {
+    background: #262626;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.messages-pill:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
+}
+
+.pill-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.pill-icon {
+    font-size: 1.4rem;
+}
+
+.pill-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: #ff3b30;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 100px;
+    border: 2px solid white;
+}
+
+[data-theme='dark'] .pill-badge {
+    border-color: #262626;
+}
+
+.pill-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.pill-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--feed-primary), var(--feed-accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px solid white;
+}
+
+[data-theme='dark'] .pill-avatar {
+    border-color: #333;
+}
+
+.pill-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-letter {
+    color: white;
+    font-weight: 800;
+    font-size: 0.8rem;
+}
+
+/* Pulse Animation for Unread */
+.pill-badge {
+    animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+        box-shadow: 0 0 10px rgba(255, 59, 48, 0.3);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .messages-pill-container {
+        bottom: 80px;
+        /* Above mobile bottom nav */
+        right: 16px;
+    }
+}
