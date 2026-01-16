@@ -1,0 +1,263 @@
+# ============================================
+# INSTAINTELLI - Docker Compose Configuration
+# ============================================
+# Note: version is no longer required in newer docker-compose versions
+
+services:
+  # PostgreSQL - Hassan (Auth & Users)
+  postgres:
+    image: postgres:15-alpine
+    container_name: instaintelli_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_DB: ${POSTGRES_DB:-instaintelli}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"  # Use 5433 to avoid conflict with local PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+
+  # MongoDB - Sami (Posts)
+  mongodb:
+    image: mongo:7
+    container_name: instaintelli_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-mongodb}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-mongodb123}
+      MONGO_INITDB_DATABASE: ${MONGODB_DB:-instaintelli}
+    ports:
+      - "${MONGODB_PORT:-27018}:27017"  # Use 27018 to avoid conflict with local MongoDB
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' --quiet || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+
+  # Redis - Alisha (Caching)
+  redis:
+    image: redis:7-alpine
+    container_name: instaintelli_redis
+    ports:
+      - "${REDIS_PORT:-6380}:6379"  # Use 6380 to avoid conflict with local Redis
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+
+  # MinIO - Sami (Object Storage)
+  minio:
+    image: minio/minio:latest
+    container_name: instaintelli_minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+
+  # ChromaDB - Raza (Vector Database)
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: instaintelli_chromadb
+    ports:
+      - "8001:8000"  # Use 8001 to avoid conflict with backend (8000)
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+    healthcheck:
+      # Use python to check health since curl may not be available
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/heartbeat')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s  # Give ChromaDB more time to start
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+
+  # Neo4j - Social Graph Database (User Connections, Likes, Comments, Messages)
+  neo4j:
+    image: neo4j:latest
+    container_name: instaintelli_neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-neo4j123}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=2G
+      - NEO4J_dbms_memory_pagecache_size=1G
+    ports:
+      - "${NEO4J_PORT:-7474}:7474"  # HTTP
+      - "${NEO4J_BOLT_PORT:-7687}:7687"  # Bolt protocol
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || curl -f http://localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+
+  # Cassandra - Time-Series Data (User Activity Logs, Analytics, Notifications)
+  cassandra:
+    image: cassandra:4.1
+    container_name: instaintelli_cassandra
+    environment:
+      - CASSANDRA_CLUSTER_NAME=InstaIntelliCluster
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_RACK=rack1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - MAX_HEAP_SIZE=512M
+      - HEAP_NEWSIZE=128M
+    ports:
+      - "${CASSANDRA_PORT:-9042}:9042"  # CQL Native Protocol
+      - "7000:7000"  # Inter-node communication
+      - "7001:7001"  # SSL inter-node communication
+      - "7199:7199"  # JMX
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -E '^UN' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s  # Cassandra needs time to start
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: instaintelli_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres:5432/${POSTGRES_DB:-instaintelli}
+      - MONGODB_URL=mongodb://${MONGODB_USER:-mongodb}:${MONGODB_PASSWORD:-mongodb123}@mongodb:27017/${MONGODB_DB:-instaintelli}?authSource=admin
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - MINIO_ENDPOINT=minio:9000
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000  # Container port (not host port)
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-neo4j123}
+      - CASSANDRA_HOSTS=cassandra
+      - CASSANDRA_PORT=9042
+      - CASSANDRA_KEYSPACE=instaintelli
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL}
+      - SUPABASE_PROJECT_URL=${SUPABASE_PROJECT_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      chromadb:
+        condition: service_started  # Changed to service_started instead of healthy to avoid blocking
+      neo4j:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend  # Mount backend code for hot-reload
+      - /app/backend/__pycache__  # Exclude cache from host
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: instaintelli_frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - instaintelli_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  chromadb_data:
+    driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+  cassandra_data:
+    driver: local
+
+networks:
+  instaintelli_network:
+    driver: bridge
+

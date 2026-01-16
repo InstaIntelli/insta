@@ -1,0 +1,74 @@
+# ============================================
+# INSTAINTELLI - Python Dependencies
+# ============================================
+
+# FastAPI & Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database Drivers
+# PostgreSQL (Hassan - Auth & Users)
+psycopg2-binary==2.9.10
+sqlalchemy==2.0.23
+alembic==1.12.1
+
+# MongoDB (Sami - Posts)
+pymongo==4.6.0
+motor==3.3.2
+
+# Redis (Alisha - Caching)
+redis==5.0.1
+hiredis==2.2.3
+
+# Object Storage (Sami - MinIO)
+minio==7.2.0
+boto3==1.29.7
+Pillow>=10.0.0
+
+# Vector Database (Raza - Embeddings)
+faiss-cpu>=1.12.0
+numpy>=1.26.0,<2.0.0
+
+# AI & LLM (Raza - AI Processing)
+openai>=1.6.1,<1.68.0
+# langchain==0.0.350  # Commented out - causing slow dependency resolution
+# langchain-openai==0.0.2  # Commented out - causing slow dependency resolution
+tiktoken>=0.5.2,<0.6.0  # Now installable with Rust
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt>=4.0.1
+pyotp==2.9.0
+qrcode[pil]==7.4.2
+supabase>=2.0.0
+
+# Utilities
+python-dotenv==1.0.0
+httpx==0.25.2
+aiofiles==23.2.1
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
+
+# ============================================
+# Optional Dependencies (Uncomment if needed)
+# ============================================
+
+# ChromaDB - Runs as Docker service, Python client required for vector search
+chromadb>=0.4.0
+
+# Graph Database (Neo4j - Social Connections)
+neo4j>=5.14.0
+
+# Time-Series Database (Cassandra - Activity Logs & Analytics)
+cassandra-driver>=3.28.0
+
+# Local embeddings (requires ~1-2GB PyTorch download)
+# sentence-transformers>=2.2.2
